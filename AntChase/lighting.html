@@ -1,0 +1,165 @@
+<html> 
+  <head> 
+    <title>Ant Chase with custom shaders| Paul Kaplan</title>
+    <style>html{background:#0b0b0b; } canvas { width: 100%; height: 100% }</style> 
+  </head>
+  <body>
+    <script src="js/three.js"></script> 
+    <script src="js/tween.js"></script>
+    <script src="js/underscore.js"></script>
+     
+    <script src="js/lights_manifest.js"></script>
+    <script src="js/TrackballControls.js"></script>
+    <script src="js/dat.gui.min.js"></script>
+    <script src="js/stats.min.js"></script>
+    <script src="js/pColor.js"></script>
+
+    <script>    
+    var stats, clock, antChase, width, height, scene, camera, renderer, controls, cube,material,mesh;
+    scene = new THREE.Scene(); 
+    // scene.fog = new THREE.FogExp2( 0xefd1b5, 0.1 );
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 1, 4000);
+    renderer = new THREE.WebGLRenderer({
+      maxLights : 10
+    });
+    controls = new THREE.TrackballControls( camera, renderer.domElement );
+    
+    controls.rotateSpeed = 0.9;
+    controls.zoomSpeed = 0.1;
+    controls.noZoom = false;
+    controls.noPan = true;
+    controls.dynamicDampingFactor = 0.1;
+ 	  controls.minDistance = 1;
+ 	  controls.maxDistance = 3000;
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+    
+    stats = new Stats();
+            stats.setMode(0);
+    				stats.domElement.style.position = 'absolute';
+    				stats.domElement.style.top = '0px';
+    				document.body.appendChild( stats.domElement );				
+    				
+    width = window.innerWidth;
+    height = window.innerHeight;
+    _.deepClone = function(obj, depth) {
+      if (typeof obj !== 'object') return obj;
+      if (_.isString(obj)) return obj.splice();
+      if (_.isDate(obj)) return new Date(obj.getTime());
+      if (_.isFunction(obj.clone)) return obj.clone();
+      var clone = _.isArray(obj) ? obj.slice() : _.extend({}, obj);
+      if (!_.isUndefined(depth) && (depth > 0)) {
+        for (var key in clone) {
+          clone[key] = _.deepClone(clone[key], depth-1);
+        }
+      }
+      return clone;
+    };
+     var lights = [];
+     var lightMeshes = [];
+     var s = new THREE.SphereGeometry(1,20,20);
+     var m = new THREE.MeshLambertMaterial({color:0xcc00ff});
+     // lightMesh.position.set(0,0,0);
+    window.onload = function(){
+      cube = new THREE.CubeGeometry(2,2,2);
+      material = new THREE.MeshLambertMaterial({color:0xffffff});
+      mesh  = new THREE.Mesh(cube,material);
+      mesh.position.set(0,0,0);
+      console.log('set')
+      scene.add(mesh);
+      // controls.target = new THREE.Vector3(0,0,0);
+      _.each([0,1,2,3,4,5], function(){
+        var mesh2 = _.deepClone(mesh);
+        mesh2.position.x+=2*Math.random()-1;
+        mesh2.position.y+=Math.random()-0.5;
+        mesh2.position.z+=Math.random()-0.5;
+        mesh2.scale.x*=2*Math.random();
+        mesh2.scale.z*=2*Math.random();
+        scene.add(mesh2);
+      });
+      var mesh2 = _.deepClone(mesh);
+      mesh2.position.x+=2;
+      mesh2.position.y+=-1;
+      mesh2.position.z+=1;
+      mesh2.scale.x*=2;
+      mesh2.scale.z*=3;
+      scene.add(mesh2);
+      // scene.add( new THREE.AmbientLight(0x333333, 0.1))
+      camera.position.z = 15;
+      controls.target = new THREE.Vector3(0,0,0);
+      
+      _.each( lightManifest, function(light){
+        // console.log(light);
+        var l = new THREE.SpotLight( light.color );
+        var lMat = _.deepClone(m);
+        lMat.color = new THREE.Color(light.color);
+        var lMesh = new THREE.Mesh(s,lMat);
+        // console.log(lMesh);
+        lMesh.position.copy( light.position );
+        lightMeshes.push( lMesh );
+        scene.add( lMesh );
+        l.position.copy( light.position );
+        l.i = light.intensity;
+        l.intensity = 0.0;
+        l.channelNumber = light.channel;
+        lights.push( l );
+        scene.add( l );
+        // new TWEEN.Tween( { i : 0 } )
+        //     .to( { i : 1 }, 1000)
+        //     .easing( TWEEN.Easing.Linear.None )
+        //     .onUpdate( function () {
+        //       // console.log(light)
+        //       l.intensity = this.i;
+        //       // lightMeshes[light.channelNumber].material.emissive = 0xffffff*(this.i);
+        //       // lightMeshes[light.channelNumber].material.ambient = 0xffffff*(this.i);
+        //       // light.color = new THREE.Color( c );
+        //     } )
+        //     .delay(l.channelNumber*2000).start();
+      });
+      requestAnimationFrame(animate);
+      
+      // var directionalLight2 = new THREE.PointLight( 0xff0000, 3, 500 ); 
+      // directionalLight2.position.set( 0,0,200 );
+      // console.log(directionalLight2)
+      // scene.add( directionalLight2 );
+      var LightBoard = function(){
+        this.light1 = lights[0].intensity;
+        this.light2 = lights[1].intensity;
+        this.light3 = lights[2].intensity;
+        this.light4 = lights[3].intensity;
+        this.light5 = lights[4].intensity;
+        this.light6 = lights[5].intensity;
+        this.light7 = lights[6].intensity;
+        this.light8 = lights[7].intensity;
+        
+      }
+      var gui = new dat.GUI();
+      var lightBoard = new LightBoard();
+      _.each(lights, function(l){
+        gui.add( lightBoard, "light"+(l.channelNumber+1), 0.0, 2.0).step(0.01).onChange( function(v){
+          lights[l.channelNumber].intensity = v;
+        });
+      })
+      // gui.add( lightBoard, "light5", 0, 2);
+      // gui.add( lightBoard, "light1", 0, 2);
+    }
+    
+    function animate(){
+      // camera.position.z=10;
+      requestAnimationFrame(animate); 
+      render();
+      stats.update();
+      // TWEEN.update();
+      
+    }
+    
+    function render() {
+      renderer.render(scene, camera);
+      controls.update();
+    } 
+      
+      // render();
+    </script>
+  </body>
+</html>

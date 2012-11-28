@@ -1,0 +1,156 @@
+<html> 
+  <head> 
+    <title>Ant Chase with custom shaders| Paul Kaplan</title>
+    <style>html{background:#0b0b0b; } canvas { width: 100%; height: 100% }</style> 
+  </head>
+  <body>
+    <script src="js/three.js"></script> 
+    <script src="js/tween.js"></script> 
+    
+    <script src="js/TrackballControls.js"></script>
+    <script src="js/dat.gui.min.js"></script>
+    <script src="js/logistic.js"></script>
+    <script src="js/ant_s.js"></script>
+    <script src="js/stats.min.js"></script>
+   
+    <script type="x-shader/x-vertex" id="vertexShader">
+		uniform float amplitude;
+    uniform float size;
+		varying vec3 vColor;
+
+		void main() {
+			vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+      gl_PointSize = size;
+			gl_Position = projectionMatrix * mvPosition;
+		}
+    </script>
+    
+    <script type = "x-shader/x-fragment" id="fragmentShader">
+    uniform vec3 color;
+    uniform float alpha;
+    // uniform sampler2D texture;
+		void main() {
+			gl_FragColor = vec4( color, alpha );
+      // gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+
+		}
+    </script>
+
+    
+    <script>
+    var vertShader = document.getElementById('vertexShader').innerHTML
+    var fragShader = document.getElementById('fragmentShader').innerHTML;
+    
+    var stats, clock, antChase, width, height, scene, camera, renderer, controls;
+    scene = new THREE.Scene(); 
+    scene.fog = new THREE.FogExp2( 0xefd1b5, 0.1 );
+    camera = new THREE.PerspectiveCamera(60, 1, 0.001, 10000);
+    
+    // camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.001, 10000);
+    renderer = new THREE.WebGLRenderer();
+    controls = new THREE.TrackballControls( camera, renderer.domElement );
+    
+    controls.rotateSpeed = 0.2;
+    controls.zoomSpeed = 0.01;
+		controls.panSpeed = 0.8;
+    
+    controls.noZoom = false;
+    controls.noPan = false;
+    controls.dynamicDampingFactor = 0.1;
+ 	  controls.minDistance = 0.01;
+ 	  controls.maxDistance = 3000;
+		controls.keys = [ 65, 83, 68 ];
+
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+    
+    stats = new Stats();
+            stats.setMode(0);
+    				stats.domElement.style.position = 'absolute';
+    				stats.domElement.style.top = '0px';
+    				document.body.appendChild( stats.domElement );				
+    				
+    width = window.innerWidth;
+    height = window.innerHeight;
+
+    window.onload = function(){
+      antChase = new AntChase({'scene':scene});
+      
+      var gui = new dat.GUI()
+      gui.add( antChase, 'alpha', 0, 1).onChange( function(v){
+          antChase.uniforms.alpha.value = v;
+        
+      })
+      gui.addColor( antChase, 'trailColor').onChange( function(v){
+                  antChase.uniforms.color.value = v;
+              });
+      gui.add(antChase, 'size', 0, 3).onChange( function(v){
+        antChase.uniforms.size.value = v;
+      })
+      gui.add( antChase, 'iterationCount', 10, 800);
+      gui.add( antChase, 'rStep', -0.0001, 0.001);
+      gui.add( antChase, 'pauseSimulation');
+      // gui.add( antChase, 'createAnts');
+      var directionalLight1 = new THREE.DirectionalLight( 0xffffff, 2 ); 
+      directionalLight1.position.set( 1, 2, -width ).normalize();
+      var directionalLight2 = new THREE.DirectionalLight( 0xffffff, 2 ); 
+      directionalLight2.position.set( 1, 2, width ).normalize(); 
+      scene.add( directionalLight1 );
+      scene.add( directionalLight2 );
+      
+      setCamera();
+    }
+    function setCamera(){
+      var midpoint = (antChase.rMax+antChase.rInit)/2.0;
+      camera.position.y = 0.5;
+      camera.position.x = midpoint
+      camera.position.z = 1;
+      controls.target = new THREE.Vector3(midpoint,0.5,0);
+      camera.aspect = ( antChase.rRange() );
+      camera.updateProjectionMatrix();
+      antChase.createAnts();
+    }
+    function animate(){
+      requestAnimationFrame(animate); 
+      render();
+      stats.update();
+      if(!antChase.pause){
+        antChase.updateVelocities();
+      }
+    }
+    
+    function render() {
+      renderer.render(scene, camera);
+      // controls.update();
+      
+    }
+    var gutter = 160;
+    function xRange( mouseX, gutter, width, rRange, rInit){
+      return ((mouseX-gutter) / width) * rRange + rInit;
+    }
+    var dragging = false;
+    var xStart,xEnd;
+    renderer.domElement.addEventListener('mousedown', function(e){
+      xStart = xRange( e.x, gutter, width, antChase.rRange(), antChase.rInit);
+      console.log( "down x: "+ xStart);
+      dragging = true;
+    }, false);
+    renderer.domElement.addEventListener('mouseup', function(e){
+      dragging = false;
+      xEnd = xRange( e.x, gutter, width, antChase.rRange(), antChase.rInit);
+      console.log( "up x: "+xEnd);
+      antChase.resetRange( xStart,xEnd );
+      setCamera();
+    },false);
+    renderer.domElement.onmousewheel = function(e){
+      console.log(e);
+      if(e.wheelDelta<-300){ antChase.resetRange(3.5,4.0); setCamera(); }
+    }
+    // p2D = projector.projectVector(p3D, camera);
+    // p3D = projector.unprojectVector(p2D, camera);
+      
+      // render();
+    </script>
+  </body>
+</html>

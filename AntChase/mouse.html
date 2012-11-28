@@ -1,0 +1,369 @@
+<html> 
+  <head> 
+    <title>Ant Chase with custom shaders| Paul Kaplan</title>
+    <style>html{background:#000; } canvas { width: 100%; height: 100% }</style> 
+  </head>
+  <body>
+    <script src="js/three.js"></script> 
+    <script src="js/tween.js"></script> 
+    
+    <script src="js/TrackballControls.js"></script>
+    <script src="js/dat.gui.min.js"></script>
+    <script src="js/stats.min.js"></script>
+    <script src="js/underscore.js"></script>
+    
+    <script src="js/mouse.js"></script>
+   
+    <script type="x-shader/x-vertex" id="vertexShader">
+    vec3 mod289(vec3 x)
+    {
+      return x - floor(x * (1.0 / 289.0)) * 289.0;
+    }
+
+    vec4 mod289(vec4 x)
+    {
+      return x - floor(x * (1.0 / 289.0)) * 289.0;
+    }
+
+    vec4 permute(vec4 x)
+    {
+      return mod289(((x*34.0)+1.0)*x);
+    }
+
+    vec4 taylorInvSqrt(vec4 r)
+    {
+      return 1.79284291400159 - 0.85373472095314 * r;
+    }
+
+    vec3 fade(vec3 t) {
+      return t*t*t*(t*(t*6.0-15.0)+10.0);
+    }
+
+    // Classic Perlin noise
+    float cnoise(vec3 P)
+    {
+      vec3 Pi0 = floor(P); // Integer part for indexing
+      vec3 Pi1 = Pi0 + vec3(1.0); // Integer part + 1
+      Pi0 = mod289(Pi0);
+      Pi1 = mod289(Pi1);
+      vec3 Pf0 = fract(P); // Fractional part for interpolation
+      vec3 Pf1 = Pf0 - vec3(1.0); // Fractional part - 1.0
+      vec4 ix = vec4(Pi0.x, Pi1.x, Pi0.x, Pi1.x);
+      vec4 iy = vec4(Pi0.yy, Pi1.yy);
+      vec4 iz0 = Pi0.zzzz;
+      vec4 iz1 = Pi1.zzzz;
+
+      vec4 ixy = permute(permute(ix) + iy);
+      vec4 ixy0 = permute(ixy + iz0);
+      vec4 ixy1 = permute(ixy + iz1);
+
+      vec4 gx0 = ixy0 * (1.0 / 7.0);
+      vec4 gy0 = fract(floor(gx0) * (1.0 / 7.0)) - 0.5;
+      gx0 = fract(gx0);
+      vec4 gz0 = vec4(0.5) - abs(gx0) - abs(gy0);
+      vec4 sz0 = step(gz0, vec4(0.0));
+      gx0 -= sz0 * (step(0.0, gx0) - 0.5);
+      gy0 -= sz0 * (step(0.0, gy0) - 0.5);
+
+      vec4 gx1 = ixy1 * (1.0 / 7.0);
+      vec4 gy1 = fract(floor(gx1) * (1.0 / 7.0)) - 0.5;
+      gx1 = fract(gx1);
+      vec4 gz1 = vec4(0.5) - abs(gx1) - abs(gy1);
+      vec4 sz1 = step(gz1, vec4(0.0));
+      gx1 -= sz1 * (step(0.0, gx1) - 0.5);
+      gy1 -= sz1 * (step(0.0, gy1) - 0.5);
+
+      vec3 g000 = vec3(gx0.x,gy0.x,gz0.x);
+      vec3 g100 = vec3(gx0.y,gy0.y,gz0.y);
+      vec3 g010 = vec3(gx0.z,gy0.z,gz0.z);
+      vec3 g110 = vec3(gx0.w,gy0.w,gz0.w);
+      vec3 g001 = vec3(gx1.x,gy1.x,gz1.x);
+      vec3 g101 = vec3(gx1.y,gy1.y,gz1.y);
+      vec3 g011 = vec3(gx1.z,gy1.z,gz1.z);
+      vec3 g111 = vec3(gx1.w,gy1.w,gz1.w);
+
+      vec4 norm0 = taylorInvSqrt(vec4(dot(g000, g000), dot(g010, g010), dot(g100, g100), dot(g110, g110)));
+      g000 *= norm0.x;
+      g010 *= norm0.y;
+      g100 *= norm0.z;
+      g110 *= norm0.w;
+      vec4 norm1 = taylorInvSqrt(vec4(dot(g001, g001), dot(g011, g011), dot(g101, g101), dot(g111, g111)));
+      g001 *= norm1.x;
+      g011 *= norm1.y;
+      g101 *= norm1.z;
+      g111 *= norm1.w;
+
+      float n000 = dot(g000, Pf0);
+      float n100 = dot(g100, vec3(Pf1.x, Pf0.yz));
+      float n010 = dot(g010, vec3(Pf0.x, Pf1.y, Pf0.z));
+      float n110 = dot(g110, vec3(Pf1.xy, Pf0.z));
+      float n001 = dot(g001, vec3(Pf0.xy, Pf1.z));
+      float n101 = dot(g101, vec3(Pf1.x, Pf0.y, Pf1.z));
+      float n011 = dot(g011, vec3(Pf0.x, Pf1.yz));
+      float n111 = dot(g111, Pf1);
+
+      vec3 fade_xyz = fade(Pf0);
+      vec4 n_z = mix(vec4(n000, n100, n010, n110), vec4(n001, n101, n011, n111), fade_xyz.z);
+      vec2 n_yz = mix(n_z.xy, n_z.zw, fade_xyz.y);
+      float n_xyz = mix(n_yz.x, n_yz.y, fade_xyz.x); 
+      return 2.2 * n_xyz;
+    }
+    attribute vec3 next;
+    attribute float aTime;
+    attribute vec3 customColor;
+    varying float spawnTime;
+    varying vec3 vColor;
+    varying vec3 force;
+    uniform float uTime;
+    varying vec2 vUv;
+
+		void main() {
+		  // Alpha fade over time
+		  vUv = uv;
+		  spawnTime = aTime;
+		  vColor = customColor;
+      // Position
+      vec3 p = position;
+      // force = next;
+      p.x += force.x;
+      p.y += force.y;
+      p.z += force.z;
+      
+      // +=nextspawnTime/100000.0
+      // position[0] += snoise(vColor);
+      float dt = uTime - spawnTime;
+      // float lifeTime = clamp(1.0 - dt/uLifeTime, 0.0, 1.0);
+      // p.x+=20.0*cnoise(vec3(vColor.xy,spawnTime));
+      p.x+=20.0*cnoise(vec3(position.x,spawnTime,uTime));
+      p.y+=20.0*cnoise(vec3(spawnTime,position.y,uTime));
+      p.z+=20.0*cnoise(vec3(spawnTime,uTime,position.x));
+      // // // 
+      // gl_PointSize = 15.0;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4( p , 1.0 );
+      
+      // gl_Position = projectionMatrix * modelViewMatrix * vec4( position+10*snoise(position), 1.0 );
+		}
+    </script>
+    
+    <script type = "x-shader/x-fragment" id="fragmentShader">
+    uniform float uTime;
+    uniform float uLifeTime;
+    varying vec3 vColor;
+    varying float spawnTime;
+    uniform sampler2D texture;
+    varying vec2 vUv;
+    
+		void main() {
+		  float dt = uTime - spawnTime;
+      float alpha = clamp(1.0 - dt/uLifeTime, 0.0, 1.0);
+      // vec3 c = vColor*vec3(vUv,spawnTime);
+      gl_FragColor = vec4(vColor,1.0);
+      // gl_FragColor = gl_FragColor*texture2D(texture,gl_PointCoord);
+      // gl_FragColor = vec4(gl_FragColor.xyz, 0.8);
+      // gl_FragColor = vec4(vColor, 1.0);
+      // gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+		}
+    </script>
+
+    
+    <script>
+    var vertShader = document.getElementById('vertexShader').innerHTML
+    var fragShader = document.getElementById('fragmentShader').innerHTML;
+    
+    var stats, clock, antChase, width, height, scene, camera, renderer, controls;
+    scene = new THREE.Scene(); 
+    // scene.fog = new THREE.FogExp2( 0xefd1b5, 0.1 );
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.01, 40000);
+    renderer = new THREE.WebGLRenderer();
+    controls = new THREE.TrackballControls( camera, renderer.domElement );
+    
+    controls.rotateSpeed = 0.5;
+    controls.zoomSpeed = 0.5;
+    controls.noZoom = false;
+    controls.noPan = true;
+    controls.dynamicDampingFactor = 0.3;
+ 	  controls.minDistance = 0.1;
+ 	  controls.maxDistance = 300000;
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+    
+    stats = new Stats();
+            stats.setMode(0);
+    				stats.domElement.style.position = 'absolute';
+    				stats.domElement.style.top = '0px';
+    				document.body.appendChild( stats.domElement );				
+    				
+    width = window.innerWidth;
+    height = window.innerHeight;
+    var Mouse = function(){
+      this.scene = scene;
+    	this.uniforms = {
+    		color:     { type: "c", value: this.trailColor },
+    		uTime:     { type: "f", value: 1.0},
+    		uLifeTime: { type: "f", value: this.trailLifetime },
+    		texture:   { type: "t", value: THREE.ImageUtils.loadTexture("textures/spark1.png")}
+    	};
+      this.attributes = {
+        customColor: { type: 'c', value: [] },
+        aTime: { type: 'f', value: [] },
+        next   :   { type: "vec3", value: []}
+    	  
+      };
+      this.material = new THREE.ShaderMaterial({
+          uniforms:       this.uniforms,
+          attributes:     this.attributes,
+          vertexShader:   vertShader,
+          fragmentShader: fragShader,
+          transparent: true,
+          depthTest:false,
+          opacity:0.3
+        });
+      this.verts = 2*100000;
+      this.geometry = new THREE.Geometry();
+      this.geometry.dynamic = true;
+      // this.updateVels = function(){
+      //   _.each( _.range(this.verts), function(d){
+      //     _this.attributes.next.value.[d] = 
+      //     _this.attributes.next.value.[d+1] = 
+      //     
+      //       Math.random(),
+      //       Math.random(),
+      //       Math.random()
+      //     ))
+      // }
+      this.init = function(){
+        var _this = this;
+        _.each( _.range(this.verts), function(d){
+          // _this.geometry.vertices.push( new THREE.Vector3(Math.random(),Math.random(),Math.random()) );
+          // console.log(d);
+          _this.geometry.vertices.push( new THREE.Vector3(
+            d%500   -25,
+            Math.floor(d/500)%500 -25,
+            Math.floor(d/(5*500))-25 )
+          );
+          // _this.geometry.vertices.push( new THREE.Vector3(
+          //   Math.random()*2,
+          //   Math.random()*2,
+          //   Math.random()*2
+          // )
+          // );
+          _this.attributes.aTime.value.push(0);
+          // _this.attributes.customColor.value.push( new THREE.Color(0x)
+          
+          _this.attributes.customColor.value.push( new THREE.Color().setHSV(
+            d/200000.0,
+            0.8,0.9
+            ) );
+            _this.attributes.next.value.push( new THREE.Vector3(
+              0,0,0
+            ))
+        });
+        this.trail = new THREE.ParticleSystem( this.geometry, this.material);
+        // this.scene.add(this.trail);
+        requestAnimationFrame( animate );
+      }
+    }
+    var mouse;
+    window.onload = function(){
+      // antChase = new AntChase({'scene':scene});
+      // antChase.createAnts();  
+      
+      var gui = new dat.GUI();
+      mouse = new Mouse();
+      mouse.init();
+      var s  = new THREE.SphereGeometry(1,20,20);
+      var m  = new THREE.MeshLambertMaterial({color:0xff00ff});
+      var sm = new THREE.Mesh(s,m);
+      sm.scale.z*=0.01
+      sm.position.set(0,0,0);
+      // scene.add( sm );
+      var directionalLight1 = new THREE.DirectionalLight( 0xffffff, 2 ); 
+      directionalLight1.position.set( 1, 2, -width ).normalize();
+      var directionalLight2 = new THREE.DirectionalLight( 0xffffff, 2 ); 
+      directionalLight2.position.set( 1, 2, width ).normalize(); 
+      scene.add( directionalLight1 );
+      scene.add( directionalLight2 );
+      scene.add( mouse.trail )
+      camera.position.z = 2;
+      controls.target = new THREE.Vector3(0,0,0);
+      _.each(_.range(mouse.verts), function(i){
+        mouse.attributes.aTime.value[i] = clock.getElapsedTime();
+      });
+    }
+    var mousePosition = new THREE.Vector3(0,0,0);
+    function animate(){
+      requestAnimationFrame(animate); 
+      render();
+      stats.update();
+    }
+    var n = 0;
+    function followMouse(){
+
+      _.each(_.range(100), function(i){
+        mousePosition.x+=1000*(Math.random()-0.5);
+        mousePosition.y+=1000*(Math.random()-0.5);
+        // mousePosition.z+=0.1*(Math.random()-0.5);
+        
+        var mouse3D= new THREE.Vector3(
+          2.0*mousePosition.x/width-1.0,
+          -2.0*mousePosition.y/height+1.0,
+          0
+        );
+        projector.unprojectVector(mouse3D,camera);
+        // mouse3D = new THREE.Vector3(
+        //   Math.random()*Math.sin(i),
+        //   Math.random()*Math.cos(i),
+        //   Math.random()*Math.cos(i) );
+        mouse.trail.geometry.vertices[(n++)%mouse.verts].copy( mouse3D );
+        mouse.attributes.next.value[n%mouse.verts] = mouse3D;
+        
+        mouse.attributes.customColor.value[n%mouse.verts]= new THREE.Color().setHSV(
+          ((n%10000)/10000.0),
+          0.5,
+          0.5
+        );
+        // mouse.
+      })
+      // mouse.trail.geometry.vertices[n].copy( mousePosition );
+    }
+    var clock = new THREE.Clock();
+    function render() {
+      renderer.render(scene, camera);
+      controls.update();
+      mouse.uniforms.uTime.value = clock.getElapsedTime();
+      // mouse.
+      //
+        followMouse();
+        mouse.trail.geometry.verticesNeedUpdate = true;
+      //
+        // mouse.attributes.customColor.value[n%mouse.verts]= new THREE.Color().setHSV(
+        //   mousePosition.x/width-0.5,
+        //   0.5,
+        //   0.5
+        // );
+        // mouse.attributes.aTime.value[n%mouse.verts] = this.cloc
+        
+        
+      mouse.attributes.aTime.needsUpdate = true;
+      mouse.attributes.customColor.needsUpdate = true;
+      
+      n++;
+    } 
+    var projector = new THREE.Projector();
+    function normalize(xy){
+      var newXY = { x : 0, y : 0};
+      newXY.x = 2*xy.x / width - 1.0;
+      newXY.y = 2*xy.y / height - 1.0;
+      var mouse3D = new THREE.Vector3(newXY.x,-newXY.y,0)
+      return projector.unprojectVector(mouse3D,camera);
+      // return newXY
+    }
+    renderer.domElement.addEventListener( 'mousemove', function(e){
+            mousePosition = e;
+    });
+      
+      // render();
+    </script>
+  </body>
+</html>
