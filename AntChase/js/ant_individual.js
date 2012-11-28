@@ -12,7 +12,7 @@ var Ant = function(n, r, nAnts){
   }
   this.id       = n;
   this.follow   = n+1;
-  this.color    = new THREE.Color().setHSV( n/53.0, 0.5, 0.5  );
+  this.color    = new THREE.Color().setHSV( n/nAnts, 0.5, 0.5  );
   this.create   = function(){
     this.material = new THREE.MeshLambertMaterial({ 
       color:this.color
