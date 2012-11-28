@@ -101,7 +101,7 @@ var AntChase = function(params){
       console.log('restarting');
       // scene.remove(this.trail);
       for(var i=0; i<this.trailCurrent; i++){
-        this.trail.geometry.vertices[i]= new THREE.Vector3(1000,1000,1000);
+        this.trail.geometry.vertices[i].set( 1000,1000,1000 );
         this.attributes.aTime.value[i]=0.0;
       }
     }
@@ -113,6 +113,18 @@ var AntChase = function(params){
     // this.
     // scene.simulate();
     this.lastNAnts = this.nAnts;
+  }
+  this.computeCoM = function(){
+    var com = new THREE.Vector3();
+    for(var n=0;n<this.ants.length; n++){
+      com.x+=this.ants[n].mesh.position.x;
+      com.y+=this.ants[n].mesh.position.y;
+      com.z+=this.ants[n].mesh.position.z;
+    }
+    com.x /= this.ants.length;
+    com.y /= this.ants.length;
+    com.z /= this.ants.length;
+    return com;
   }
   this.updateVelocities = function(){
     
