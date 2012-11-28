@@ -1,0 +1,41 @@
+html {
+  font-size: 12px;
+  line-height: 18px;
+  font-family:'Open Sans',sans-serif;
+  color:#222;
+  font-weight: 300;
+}
+
+body {
+  font-size: 1em;
+  font-size: 1.25em;
+  line-height: 1.5em;
+  padding-left: 1em;
+  padding-right: 1em;
+  margin-top:2em;
+}
+
+h1 { font-size: 2.25em; line-height: 1.50em; font-weight: 400; }
+h2 { font-size: 1.75em; line-height: 1.50em; font-weight: 300; }
+h3 { font-size: 1.50em; line-height: 1.50em; font-weight: 200; }
+h4 { font-size: 1.25em; font-weight: 200;}
+h5 { font-size: 1.00em; font-weight: 400;}
+h6 { font-size: 0.75em; font-weight: 200;}
+
+h1 { font-family:'Merriweather',serif; }
+	
+ul li, ul ul, ul ol,
+ol li, ol ul, ol ol {
+  list-style-type: none;
+  margin-left: 0.5em;
+}
+a { text-decoration: none; color:#222}
+.row + .row { margin-top:2em;}
+.footer { min-height:3em; }
+/*p { padding:0.2em;}*/
+@media handheld, only screen and (max-width: 767px) {
+   body {
+     margin-top: 2.75em;
+     padding: 0;
+   }
+}

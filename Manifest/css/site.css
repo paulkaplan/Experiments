@@ -1,0 +1,27 @@
+.header { margin-bottom: 3em; border-bottom:1px solid #ccc;}
+
+
+div.bg{ 
+	background: url(/img/photo/tower2.jpg) no-repeat center center fixed; 
+	-webkit-background-size: cover;
+	-moz-background-size: cover;
+	-o-background-size: cover;
+	background-size: cover;
+	position: absolute;
+	margin:0;
+	padding:0;
+	top:0;
+	left:0;
+	width:100%;
+	min-height:100%;
+	z-index:-100000;
+}
+
+.content { margin-top:3em; }
+
+.right { padding-top:1.2em;text-align:right; }
+.project > h3 { text-align:right;}
+@media handheld, only screen and (max-width: 767px) {
+  div + div { padding-top:0.5em; } 
+  
+}
