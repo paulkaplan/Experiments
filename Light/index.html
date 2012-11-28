@@ -1,0 +1,309 @@
+<html> 
+  <head> 
+    <style>html{background:#0b0b0b; } canvas { width: 100%; height: 100% }</style> 
+    <link rel="stylesheet" type="text/css" href="lights.css">
+  
+  </head>
+  <body>
+    <script src="js/three.js"></script> 
+    <script src="js/tween.js"></script>
+    <script src="js/underscore.js"></script>
+     
+    <script src="js/lights_manifest.js"></script>
+    <script src="js/TrackballControls.js"></script>
+    <script src="js/OrbitControls.js"></script>
+    
+    <script src="js/dat.gui.min.js"></script>
+    <script src="js/stats.min.js"></script>
+    <script src="js/pColor.js"></script>
+    <script src="js/sample_cues.js"></script>
+    
+
+    <script>
+    var texture = THREE.ImageUtils.loadTexture('textures/wall.jpg', {}, function() {
+      requestAnimationFrame(animate); 
+    });
+    var LightBoard = function(lights,cues){
+      var _this = this;
+      this.lights = lights;
+      this.intensity = 0;
+      this.color     = new THREE.Color(0xFFFF00).getHex();
+      this.selectedLight = null;
+      this.blackout = function(){
+        _.each(this.lights, function(light){ 
+          // console.log(li)
+          light.intensity = 0; 
+          light.color = new THREE.Color(0x000000);
+          lightMeshes[light.channelNumber].material.color = new THREE.Color(0x000000);
+        });
+      };
+      this.startShow = function(){
+        _.each(cues, function(cue){
+          if(cue.blackout) _.delay(function(){lightBoard.blackout()},cue.startAt*1000);
+          else{
+            cue.highlightFunction = _.debounce(function(n){
+               lightBoard.cueElList[n].setAttribute('class', 'cue complete');
+               // _.each(cue.lightsUp,function(light){})
+             }, 30); 
+          var highlight = _.debounce(function(){ console.log(n); lightBoard.cueElList[this.channel].setAttribute('class', 'cue complete');},300)
+          _.each(cue.lightsUp,function(light){ light.initialInt = lightBoard.lights[light.channel].intensity } )
+
+          new TWEEN.Tween( { i : 0 } )
+              .to( { i : 1 }, cue.upTime*1000)
+              .easing( TWEEN.Easing.Linear.None )
+              .onUpdate( function (v) {
+                // console.log(lightBoard,cue)
+                cue.highlightFunction(cue.number-1);
+                lightBoard.cueElList[cue.number-1].setAttribute('class', 'cue highlight');
+                _.each(cue.lightsUp, function(light){
+                  // console.log("ch"+light.channfel+" at "+(light.startIntensity+light.delta*v));
+                  lights[light.channel].intensity = light.initialInt + light.delta*v;
+                  lights[light.channel].color = new THREE.Color(light.color);
+                  var color = new THREE.Color(light.color);
+                  var hsv = color.getHSV();
+                  var newV = (light.delta<0)? 1-v : v;
+                  var scaleColor = new THREE.Color().setHSV(hsv.h,hsv.s,hsv.v*newV);
+                  // THREE.ColorUtils.adjustHSV(color,0,0,i)
+                  lightMeshes[light.channel].material.color = new THREE.Color().setHSV(hsv.h,hsv.s,hsv.v*v);
+                  
+                });
+                // _.each(cue.lightsDown, function(light){
+                //   lights[light.channel].intensity = (1-v)*light.intensity;
+                // })
+              }).delay(cue.startAt*1000).start();
+          }
+        });
+      }
+      this.domElement = document.createElement('div');
+      this.domElement.setAttribute('id', 'cueList');
+      // this.restart
+      // this.domElement.appendChild( document.createElement('div').setAttribute('id', 'startButton') )
+      this.cueElement = function(n){ 
+        var el = document.createElement('div'); 
+        el.setAttribute('class', 'cue');
+        el.innerHTML = "<span class='cueNumber'>"+n+"</span>";
+        _this.domElement.appendChild( el );
+        return el;
+      }
+      // this.cueElement.setAttribute('class', 'cue');
+      this.cueList = cues;
+      this.cueElList = _.map(this.cueList,function(cue){ return _this.cueElement(cue.number) });
+      this.complete =  _.debounce(function(n){ _this.cueElList[n].setAttribute('class', 'cue complete');},3000)
+      this.highlight = function(n){
+        // console.log(_this.cueElList[n]); 
+        _this.cueElList[n].setAttribute('class', 'cue highlight');
+        _this.complete(n);
+      }// }
+    }
+    var stats, clock, antChase, width, height, scene, camera, renderer, controls, cube,material,mesh;
+    scene = new THREE.Scene(); 
+    // scene.fog = new THREE.FogExp2( 0xefd1b5, 0.1 );
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 1, 4000);
+    renderer = new THREE.WebGLRenderer({
+      maxLights : 10,
+      antialias: true,
+      preserveDrawingBuffer   : true
+      
+    });
+    controls = new THREE.OrbitControls( camera, renderer.domElement );
+    
+    controls.maxPolarAngle = Math.PI/2-0.25; // radians
+    //    
+    // controls.rotateSpeed = 0.9;
+    //     controls.zoomSpeed = 0.1;
+    //     controls.noZoom = false;
+    //     controls.noRotate = true;
+    //     controls.noPan = true;
+    //     controls.dynamicDampingFactor = 0.1;
+             controls.minDistance = 5;
+             controls.maxDistance = 20;
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+    
+    stats = new Stats();
+            stats.setMode(0);
+    				stats.domElement.style.position = 'absolute';
+    				stats.domElement.style.top = '0px';
+    				document.body.appendChild( stats.domElement );				
+    				
+    width = window.innerWidth;
+    height = window.innerHeight;
+    _.deepClone = function(obj, depth) {
+      if (typeof obj !== 'object') return obj;
+      if (_.isString(obj)) return obj.splice();
+      if (_.isDate(obj)) return new Date(obj.getTime());
+      if (_.isFunction(obj.clone)) return obj.clone();
+      var clone = _.isArray(obj) ? obj.slice() : _.extend({}, obj);
+      if (!_.isUndefined(depth) && (depth > 0)) {
+        for (var key in clone) {
+          clone[key] = _.deepClone(clone[key], depth-1);
+        }
+      }
+      return clone;
+    };
+     var lights = [];
+     var lightMeshes = [];
+     var s = new THREE.SphereGeometry(0.5,20,20);
+     var m = new THREE.MeshLambertMaterial({color:0xcc00ff});
+     // lightMesh.position.set(0,0,0);
+     // var selectedLight = null;
+     var lightBoard ;
+    window.onload = function(){
+      // camera.lookAt(new THREE.Vector3(0,10,0) );
+      cube = new THREE.SphereGeometry(0.75,20,20);
+      material = new THREE.MeshLambertMaterial({color:0xffffff,map:texture});
+      mesh  = new THREE.Mesh(cube,material);
+      mesh.position.set(0,1.2,0);
+      console.log('set')
+      scene.add(mesh);
+      
+      var mesh2 = new THREE.Mesh( new THREE.SphereGeometry(1,100,100), material );
+      mesh2.position.x+=1;
+      mesh2.position.y+=1;
+      scene.add(mesh2);
+      
+      var mesh2 = new THREE.Mesh( new THREE.SphereGeometry(0.5,100,100), material );
+      // mesh2.position.x+=1;
+      mesh2.position.y+=2;
+      scene.add(mesh2);
+      
+      // var mesh2 = _.deepClone(mesh);
+      cube = new THREE.SphereGeometry(0.75,20,20);
+      material = new THREE.MeshLambertMaterial({color:0xffffff,map:texture});
+      mesh2  = new THREE.Mesh(cube,material);
+      mesh2.position.set(0,0,0);
+      mesh2.material.color = new THREE.Color(0x1b1b1b);
+      mesh2.scale.x*=20;
+      mesh2.scale.z*=20;
+      mesh2.scale.y*=0.5;
+      scene.add(mesh2);
+      // scene.add( new THREE.AmbientLight(0x333333, 0.1))
+      // camera.position.z = 20;
+      // camera.position.y = 0;
+      var backwall = new THREE.Mesh( new THREE.CubeGeometry(50,50,1), material );
+      backwall.position.set(0,2,-12);
+      scene.add(backwall);
+      var sidewall = new THREE.Mesh( new THREE.CubeGeometry(1,50,50), material );
+      sidewall.position.set(12,2,0);
+      scene.add(sidewall);
+      var sidewall = new THREE.Mesh( new THREE.CubeGeometry(1,50,50), material );
+      sidewall.position.set(-12,2,0);
+      scene.add(sidewall);
+      controls.target = new THREE.Vector3(0,0,0);
+      var hemiLight = new THREE.HemisphereLight(0x0b0b0b, 0x0f0f0f, 1);
+      scene.add(hemiLight);
+      
+      _.each( lightManifest, function(light){
+        // console.log(light);
+        var l = new THREE.SpotLight( light.color );
+        var lMat = _.deepClone(m);
+        var lPoint = new THREE.PointLight(0xffffff,1,1.5);
+        lPoint.position.copy( light.position );
+        lPoint.position.y+=1.5;
+        scene.add(lPoint);
+        lMat.color = new THREE.Color(light.color);
+        var lMesh = new THREE.Mesh(s,lMat);
+        // console.log(lMesh);
+        lMesh.position.copy( light.position );
+        lMesh.light_id = light.channel;
+        lightMeshes.push( lMesh );
+        scene.add( lMesh );
+        l.position.copy( light.position );
+        l.i = light.intensity;
+        l.intensity = light.intensity;
+        l.channelNumber = light.channel;
+        // l.target = new THREE.Vecto
+        lights.push( l );
+        scene.add( l );
+      });
+     
+      
+      // var directionalLight2 = new THREE.PointLight( 0xff0000, 3, 500 ); 
+      // directionalLight2.position.set( 0,0,200 );
+      // console.log(directionalLight2)
+      // scene.add( directionalLight2 );
+      var gui = new dat.GUI();
+      // var selectedLight = null;
+      lightBoard = new LightBoard(lights,cues);
+      document.body.appendChild(lightBoard.domElement);
+      gui.add( lightBoard, 'blackout');
+      gui.add( lightBoard, 'startShow');
+      
+      var intensityController = gui.add( lightBoard, 'intensity', 0,2).listen();
+          intensityController.onChange( function(v){
+            if(lightBoard.selectedLight !== null){
+              lightBoard.selectedLight.intensity = v;
+            }
+          });
+      var colorController = gui.addColor( lightBoard, 'color').listen();
+          colorController.onChange( function(v){
+            if(lightBoard.selectedLight !== null){
+              lightBoard.selectedLight.color =  new THREE.Color().setHex(v);
+              line.material.color = new THREE.Color().setHex(v);
+              lightMeshes[lightBoard.selectedLight.channelNumber].material.color =  new THREE.Color().setHex(v);
+              line.material.needsUpdate = true;
+            }
+          });
+      // gui.add( lightBoard, "light5", 0, 2);
+      // gui.add( lightBoard, "light1", 0, 2);
+      var lineMaterial = new THREE.LineBasicMaterial({
+          color: 0x0000ff,
+      });
+      var lineGeometry = new THREE.Geometry();
+        lineGeometry.vertices.push(new THREE.Vector3(0,0,0) );
+        lineGeometry.vertices.push(new THREE.Vector3(0,0,0) );
+        // lineGeometryvertices.push(new THREE.Vector3(10, 0, 0));
+      line = new THREE.Line(lineGeometry, lineMaterial);
+      scene.add(line);
+      function onDocumentMouseDown( event ) {
+
+    		event.preventDefault();
+
+    		var vector = new THREE.Vector3( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1, 0.5 );
+    		projector.unprojectVector( vector, camera );
+
+    		var ray = new THREE.Ray( camera.position, vector.subSelf( camera.position ).normalize() );
+
+    		var intersects = ray.intersectObjects( scene.children );
+
+    		if ( intersects.length > 0 ) {
+          if(intersects[0].object.hasOwnProperty('light_id')){
+            lightBoard.selectedLight = lights[ intersects[0].object.light_id ];
+            lightBoard.color         = lights[ intersects[0].object.light_id ].color.getHex();
+            lightBoard.intensity     = lights[ intersects[0].object.light_id ].intensity;
+            
+            line.geometry.vertices[0].set(0,1 ,0);
+            line.geometry.vertices[1].copy(  intersects[0].object.position );
+            // controls.noRotate = false;
+            // camera.position.copy( intersects[0].object.position );
+            // controls.noRotate = true;
+            line.material.color = _.deepClone(lights[ intersects[0].object.light_id ].color);
+            // line.material.colorNeed
+            line.geometry.verticesNeedUpdate = true;
+            // lineGeometryvertices.push(new THREE.Vector3(10, 0, 0));
+          }
+    		}
+    	}
+      renderer.domElement.addEventListener('mousedown', onDocumentMouseDown);
+    }
+    var line;
+    function animate(){
+      // camera.position.z=10;
+      requestAnimationFrame(animate); 
+      render();
+      stats.update();
+      TWEEN.update();
+      
+    }
+    
+    function render() {
+      renderer.render(scene, camera);
+      controls.update();
+    } 
+    var projector = new THREE.Projector()
+    // var board = 
+      // render();
+    </script>
+  </body>
+</html>

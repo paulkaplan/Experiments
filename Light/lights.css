@@ -1,0 +1,24 @@
+html,body { 
+  font-size:11px;
+  line-height:16px;
+  font-family: sans-serif;
+}
+#cueList { 
+  position : absolute;
+  bottom   : 0;
+  color    : #fff;
+  right    : 0;
+  bottom   : 1px solid #f00; 
+  border   : 1px solid #111;
+}
+
+.cue { 
+  line-height:1em;
+  font-size:1em;
+  min-width:200px;
+  min-height:40px;
+  border : 1px solid #222;
+}
+
+.highlight { background : rgba(200,200,0,0.5); }
+.complete { background : rgba(0,200,0,0.5); }
