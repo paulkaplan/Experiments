@@ -90,14 +90,8 @@
         gui.add(antChase, 'trailLifetime', 1, 500)
           .onChange( function(v){ antChase.uniforms.uLifeTime.value = v; });
         gui.add( antChase, 'pauseSimulation');
-        gui.add( antChase, 'createAnts');
+        gui.add( antChase, 'createAnts' );
       
-      var directionalLight1 = new THREE.DirectionalLight( 0xffffff, 2 ); 
-      directionalLight1.position.set( 1, 2, -width ).normalize();
-      var directionalLight2 = new THREE.DirectionalLight( 0xffffff, 2 ); 
-      directionalLight2.position.set( 1, 2, width ).normalize(); 
-      scene.add( directionalLight1 );
-      scene.add( directionalLight2 );
       camera.position.z = width;
       controls.target = com; // The center of mass of this system doesnt change!
       camera.lookAt(com);
