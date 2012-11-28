@@ -100,6 +100,7 @@
       scene.add( directionalLight2 );
       camera.position.z = width;
       controls.target = com; // The center of mass of this system doesnt change!
+      camera.lookAt(com);
     }
     
     function animate(){
