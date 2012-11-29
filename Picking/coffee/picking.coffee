@@ -233,17 +233,12 @@ init = () ->
   engine.groundBody = engine.addBody new Body(groundBody, groundView)
   engine.groundBody.updateVertexMap()
   engine.ground = engine.groundBody.view.mesh
-  _(70).times (i) ->    
+  _(30).times (i) ->    
     # if(Math.floor(i/16)%2==0)
     block = new Block('single')
-    block.setPosition((i%4)*10.2, (Math.floor( i / 4)%4)*10.2,5+Math.floor(i/16)*10.2)
+    block.setPosition((i%3)*10.5, (Math.floor( i / 3)%3)*10.5,5+Math.floor(i/9)*10.5)
     engine.addBody block
-    #   
-    # else
-    #   if(Math.floor(i/4)%4<3 and (i%4)<3)
-    #     block = new Block('single')
-    #     block.setPosition(5+(i%4)*10.2, 5+(Math.floor( i / 4)%4)*10.2,5+Math.floor(i/16)*10.2)
-    #     engine.addBody block
+
 
   window.addEventListener 'keydown', _.bind(engine.controlsDown, engine)
   window.addEventListener 'keyup', _.bind(engine.controlsUp, engine)

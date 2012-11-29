@@ -70,11 +70,11 @@
       } else {
         // Shoot a block
         var v=new Ball(3,3 )
-        var vel = ray.direction.multiplyScalar(150);
+        var vel = _.clone(ray.direction);
+        vel.multiplyScalar(150);
             v.phys.position.set( ray.origin.x-1, ray.origin.y-1, ray.origin.z-1 );
             v.phys.velocity.set( vel.x,vel.y,vel.z );
             engine.addBody(v)
-            console.log(v.phys.velocity.x)
       }
     })
     
