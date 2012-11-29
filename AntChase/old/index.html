@@ -1,0 +1,85 @@
+<html> 
+  <head> 
+    <title>Ant Chase | Paul Kaplan</title>
+    <style>html{background:#0b0b0b; } canvas { width: 100%; height: 100% }</style> 
+  </head>
+  <body>
+    <script src="js/three.js"></script> 
+    <script src="js/tween.js"></script> 
+    
+    <script src="js/TrackballControls.js"></script>
+    <script src="js/dat.gui.min.js"></script>
+    <script src="js/AntChase.js"></script>
+    <script src="js/ant.js"></script>
+    <script src="js/stats.min.js"></script>
+    <script src="js/detector.js"></script>
+
+    <script>
+    if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+		
+    var stats, clock, antChase, width, height, scene, camera, renderer, controls;
+    scene     = new THREE.Scene(); 
+    scene.fog = new THREE.FogExp2( 0xefd1b5, 0.001 );
+    camera    = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 1, 10000);
+    renderer  = new THREE.WebGLRenderer();
+    controls  = new THREE.TrackballControls( camera, renderer.domElement );
+  
+    controls.noPan        = true;
+    controls.noZoom       = false;
+    controls.zoomSpeed    = 0.1;
+    controls.rotateSpeed  = 0.9;
+ 	  controls.minDistance  = 1;
+ 	  controls.maxDistance  = 3000;
+    controls.dynamicDampingFactor = 0.1;
+
+    renderer.setSize (window.innerWidth, window.innerHeight );
+    document.body.appendChild(renderer.domElement);
+    
+    stats = new Stats();
+            stats.setMode(0);
+    				stats.domElement.style.position = 'absolute';
+    				stats.domElement.style.top = '0px';
+    				document.body.appendChild( stats.domElement );				
+    				
+    width = window.innerWidth;
+    height = window.innerHeight;
+
+    window.onload = function(){
+      camera.position.z = width/2
+      controls.target.set(0,0,0);
+      antChase = new AntChase({'scene':scene});
+      antChase.nAnts = antChase.numberAnts = 300;
+      antChase.createAnts();
+      
+      var gui = new dat.GUI();
+      gui.add( antChase, 'delta', 0, 5);
+      var numberController = gui.add( antChase, 'numberAnts', 10, 800).step(1);
+      
+      gui.add( antChase, 'pauseSimulation');
+      gui.add( antChase, 'createAnts');
+
+      var directionalLight1 = new THREE.DirectionalLight( 0xffffff, 2 ); 
+      directionalLight1.position.set( 1, 2, -width );
+      var directionalLight2 = new THREE.DirectionalLight( 0xffffff, 2 ); 
+      directionalLight2.position.set( 1, 2, width ); 
+      scene.add( directionalLight1 );
+      scene.add( directionalLight2 );
+    }
+    
+    function animate(){
+      requestAnimationFrame(animate); 
+      render();
+      stats.update();
+    }
+    function render() {
+      if(!antChase.pause){
+        antChase.updateVelocities();
+      }
+      renderer.render(scene, camera);
+      controls.update();
+    } 
+      
+      // render();
+    </script>
+  </body>
+</html>

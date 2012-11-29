@@ -13,7 +13,7 @@
     <script src="../lib/js/detector.js"></script>
     <script src="../lib/js/stats.js"></script>
   </body>
-  <script src="./js/editor.js"></script>
+  <script src="./js/picking.js"></script>
   <script>
     var projector = new THREE.Projector();
     var currentBlockType = 'single'
@@ -27,9 +27,10 @@
     
     var intersects;
     var pointLive = false;
+    var ray;
     function draw(){
       projector.unprojectVector(mouse3D, engine.camera);
-      var ray = new THREE.Ray(engine.camera.position, mouse3D.subSelf(engine.camera.position).normalize());
+      ray = new THREE.Ray(engine.camera.position, mouse3D.subSelf(engine.camera.position).normalize());
       intersects = ray.intersectObject(engine.ground)
       // console.log(intersects[0]);
       if( intersects.length > 0){        
@@ -51,22 +52,30 @@
     });
     window.addEventListener('click', function(e){
       if(e.shiftKey){
-      if(pointLive){
-        pointMap = engine.groundBody.getVertexFromMap( intersects.point.x+5, 0, intersects.point.y+5 );
+        if(pointLive){
+          pointMap = engine.groundBody.getVertexFromMap( intersects.point.x+5, 0, intersects.point.y+5 );
         
-        var v=new Block( currentBlockType )
-            v.phys.position.set( 
-              intersects.point.x,
-              intersects.point.y,
-              intersects.point.z = 5+10*pointMap.nBlocks++
-            )
-            intersects.point.z = 0.5 + 10*pointMap.nBlocks;
-        marker.position.copy(intersects.point)
+          var v=new Block( currentBlockType )
+              v.phys.position.set( 
+                intersects.point.x,
+                intersects.point.y,
+                intersects.point.z = 5+10*pointMap.nBlocks++
+              )
+              intersects.point.z = 0.5 + 10*pointMap.nBlocks;
+          marker.position.copy(intersects.point)
           
-        engine.ground.vertices
-        engine.addBody(v)
+          engine.ground.vertices
+          engine.addBody(v)
+        }
+      } else {
+        // Shoot a block
+        var v=new Ball(3,3 )
+        var vel = ray.direction.multiplyScalar(150);
+            v.phys.position.set( ray.origin.x-1, ray.origin.y-1, ray.origin.z-1 );
+            v.phys.velocity.set( vel.x,vel.y,vel.z );
+            engine.addBody(v)
+            console.log(v.phys.velocity.x)
       }
-    }
     })
     
   </script>

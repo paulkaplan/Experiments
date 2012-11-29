@@ -11,13 +11,13 @@ paused = false;
 
 world = new CANNON.World();
 
-world.gravity.set(0, 0, -10);
+world.gravity.set(0, 0, -15);
 
 world.broadphase = new CANNON.NaiveBroadphase();
 
-world.solver.iterations = 30;
+world.solver.iterations = 5;
 
-world.solver.k = 2000;
+world.solver.k = 1000;
 
 world.solver.d = 10;
 
@@ -86,6 +86,7 @@ Engine = (function() {
     this.controls.panSpeed = 0.2;
     this.controls.noZoom = false;
     this.controls.noPan = false;
+    this.controls.staticMoving = false;
     return this.controls.dynamicDampingFactor = 0.3;
   };
 
@@ -217,6 +218,10 @@ Body = (function() {
     this.view.mesh = mesh;
     this.verticesMap = {};
   }
+
+  Body.prototype.setPosition = function(v1, v2, v3) {
+    return this.phys.position.set(v1, v2, v3);
+  };
 
   Body.prototype.updateView = function() {
     this.view.mesh.position.copy(this.phys.position);
@@ -379,7 +384,7 @@ Ball = (function(_super) {
 engine = new Engine(world);
 
 init = function() {
-  var groundBody, groundGeo, groundShape, groundView, light, light2, segSize;
+  var groundBody, groundGeo, groundShape, groundView, segSize;
   groundShape = new CANNON.Plane(new CANNON.Vec3(0, 0, 1));
   groundBody = new CANNON.RigidBody(0, groundShape);
   segSize = 50;
@@ -391,29 +396,15 @@ init = function() {
   engine.groundBody = engine.addBody(new Body(groundBody, groundView));
   engine.groundBody.updateVertexMap();
   engine.ground = engine.groundBody.view.mesh;
-  _(10).times(function() {
-    var bird;
-    bird = new Bird(5, 3, 3, 1);
-    bird.phys.position.set(50 * Math.random() - 25, 50 * Math.random() - 25, 20 + 100 * Math.random());
-    bird.phys.angularVelocity.set(1 * Math.random(), 2 * Math.random(), 2 * Math.random());
-    bird.phys.angularDamping = 0;
-    return engine.addBody(bird);
+  _(20).times(function(i) {
+    var block;
+    block = new Block('single');
+    block.setPosition((i % 3) * 10.5, (Math.floor(i / 3) % 3) * 10.5, 5 + Math.floor(i / 9) * 10.5);
+    return engine.addBody(block);
   });
-  _(10).times(function() {
-    var ball;
-    ball = new Ball(2, 1);
-    ball.phys.position.set(Math.random() * 50 - 25, Math.random() * 50 - 25, 2);
-    return ball = engine.addControllableBody(ball);
-  });
-  light = new THREE.PointLight(0xffffff, 1.4);
-  light.position.set(0, 10, 10);
-  light2 = new THREE.PointLight(0xffffff, 1.4);
-  engine.scene.add(light);
-  engine.scene.add(light2);
   window.addEventListener('keydown', _.bind(engine.controlsDown, engine));
   window.addEventListener('keyup', _.bind(engine.controlsUp, engine));
-  animate();
-  return ball;
+  return animate();
 };
 
 animate = function() {

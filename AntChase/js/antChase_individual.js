@@ -101,7 +101,7 @@ var AntChase = function(params){
       console.log('restarting');
       // scene.remove(this.trail);
       for(var i=0; i<this.trailCurrent; i++){
-        this.trail.geometry.vertices[i].set( 1000,1000,1000 );
+        this.trail.geometry.vertices[i%this.trail.geometry.vertices.length].set( 1000,1000,1000 );
         this.attributes.aTime.value[i]=0.0;
       }
     }
@@ -126,23 +126,23 @@ var AntChase = function(params){
     com.z /= this.ants.length;
     return com;
   }
-  this.updateVelocities = function(){
+  this.updateVelocities = function(nTimes){
     
     if(this.trailCurrent >= this.trailNumber){ this.pause=true; }
     if(!this.pause){
       
       antChase.uniforms.uTime.value = antChase.clock.getElapsedTime();
       
-      // this.uniforms.clock.value+=this.ants.length;
-      for(var n=0;n<this.ants.length; n++){
+      for(var n=0,len=this.ants.length,verts=this.trail.geometry.vertices.length;n<len; n++){
         var time = this.clock.getElapsedTime();
-        var nextAntPos = this.ants[Math.min((n+1)%this.ants.length,(n+1)%this.nAnts)].mesh.position;
+        var nextAntPos = this.ants[Math.min((n+1)%len,(n+1)%this.nAnts)].mesh.position;
         if(this.ants[n]!=undefined){
-          this.ants[n].updateVelocity(nextAntPos, this.velocityScale, this.delta);
-          this.trail.geometry.vertices[this.trailCurrent%this.trail.geometry.vertices.length].copy( this.ants[n].mesh.position );
-          this.trailCurrent++;
-          this.attributes.aTime.value[this.trailCurrent%this.trail.geometry.vertices.length]=time;
-          this.attributes.customColor.value[this.trailCurrent%this.trail.geometry.vertices.length-1]=this.ants[n].color;
+          for(var j=0;j<nTimes;j++){
+            this.ants[n].updateVelocity(nextAntPos, this.velocityScale, this.delta);
+            this.trail.geometry.vertices[this.trailCurrent%verts].copy( this.ants[n].mesh.position );
+            this.attributes.customColor.value[this.trailCurrent%verts]=this.ants[n].color;
+            this.trailCurrent++;
+          }
           this.attributes.aTime.needsUpdate = true;
           this.attributes.customColor.needsUpdate = true;
           this.trail.geometry.verticesNeedUpdate = true;

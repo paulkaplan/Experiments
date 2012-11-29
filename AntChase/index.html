@@ -1,38 +1,72 @@
 <html> 
   <head> 
-    <title>Ant Chase | Paul Kaplan</title>
+    <title>Ant Chase with custom shaders| Paul Kaplan</title>
     <style>html{background:#0b0b0b; } canvas { width: 100%; height: 100% }</style> 
   </head>
   <body>
-    <script src="js/three.js"></script> 
-    <script src="js/tween.js"></script> 
+    <script src="../lib/js/three.js"></script>
+    <script src="../lib/js/TrackballControls.js"></script>
+    <script src="../lib/js/dat.gui.js"></script>
+    <script src="../lib/js/stats.js"></script>
     
-    <script src="js/TrackballControls.js"></script>
-    <script src="js/dat.gui.min.js"></script>
-    <script src="js/AntChase.js"></script>
-    <script src="js/ant.js"></script>
-    <script src="js/stats.min.js"></script>
-    <script src="js/detector.js"></script>
+    <script src="./js/antChase_individual.js"></script>
+    <script src="./js/ant_individual.js"></script>
+    
+   
+    <script type="x-shader/x-vertex" id="vertexShader">
+    attribute float aTime;
+    attribute vec3 customColor;
+    varying float spawnTime;
+    varying vec3 vColor;
+    uniform float uTime;
 
+		void main() {
+		  // Alpha fade over time
+		  spawnTime = aTime;
+		  vColor = customColor;
+      // Position
+      vec3 p = position;
+      float dt = uTime - spawnTime;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4( p , 1.0 ); 
+		}
+    </script>
+    
+    <script type = "x-shader/x-fragment" id="fragmentShader">
+    uniform float uTime;
+    uniform float uLifeTime;
+    varying vec3 vColor;
+    varying float spawnTime;
+		void main() {
+		  float dt = uTime - spawnTime;
+      float alpha = clamp(1.0 - dt/uLifeTime, 0.0, 1.0);
+      
+			gl_FragColor = vec4(vColor, alpha);
+		}
+    </script>
+
+    
     <script>
-    if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
-		
+    var vertShader = document.getElementById('vertexShader').innerHTML
+    var fragShader = document.getElementById('fragmentShader').innerHTML;
+    
     var stats, clock, antChase, width, height, scene, camera, renderer, controls;
-    scene     = new THREE.Scene(); 
-    scene.fog = new THREE.FogExp2( 0xefd1b5, 0.001 );
-    camera    = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 1, 10000);
-    renderer  = new THREE.WebGLRenderer();
-    controls  = new THREE.TrackballControls( camera, renderer.domElement );
-  
-    controls.noPan        = true;
-    controls.noZoom       = false;
-    controls.zoomSpeed    = 0.1;
-    controls.rotateSpeed  = 0.9;
- 	  controls.minDistance  = 1;
- 	  controls.maxDistance  = 3000;
+    scene = new THREE.Scene(); 
+    // scene.fog = new THREE.FogExp2( 0xefd1b5, 0.1 );
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 100, 4000);
+    renderer = new THREE.WebGLRenderer({
+      // preserveDrawingBuffer   : true
+    });
+    controls = new THREE.TrackballControls( camera, renderer.domElement );
+    
+    controls.rotateSpeed = 0.9;
+    controls.zoomSpeed = 0.1;
+    controls.noZoom = false;
+    controls.noPan = true;
     controls.dynamicDampingFactor = 0.1;
+ 	  controls.minDistance = 1;
+ 	  controls.maxDistance = 3000;
 
-    renderer.setSize (window.innerWidth, window.innerHeight );
+    renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
     
     stats = new Stats();
@@ -45,38 +79,35 @@
     height = window.innerHeight;
 
     window.onload = function(){
-      camera.position.z = width/2
-      controls.target.set(0,0,0);
       antChase = new AntChase({'scene':scene});
-      antChase.nAnts = antChase.numberAnts = 300;
-      antChase.createAnts();
-      
+      antChase.createAnts();  
+      var com = antChase.computeCoM();
       var gui = new dat.GUI();
-      gui.add( antChase, 'delta', 0, 5);
-      var numberController = gui.add( antChase, 'numberAnts', 10, 800).step(1);
+        gui.add( antChase, 'delta', 0, 5);
+        gui.add( antChase, 'numberAnts', 10, 800).step(1);
+        gui.add( antChase, 'advanceNSteps', 1,100).step(1);
+        gui.add(antChase, 'trailLifetime', 1, 500)
+          .onChange( function(v){ antChase.uniforms.uLifeTime.value = v; });
+        gui.add( antChase, 'pauseSimulation');
+        gui.add( antChase, 'createAnts' );
       
-      gui.add( antChase, 'pauseSimulation');
-      gui.add( antChase, 'createAnts');
-
-      var directionalLight1 = new THREE.DirectionalLight( 0xffffff, 2 ); 
-      directionalLight1.position.set( 1, 2, -width );
-      var directionalLight2 = new THREE.DirectionalLight( 0xffffff, 2 ); 
-      directionalLight2.position.set( 1, 2, width ); 
-      scene.add( directionalLight1 );
-      scene.add( directionalLight2 );
+      camera.position.z = width;
+      controls.target = com; // The center of mass of this system doesnt change!
+      camera.lookAt(com);
     }
     
     function animate(){
       requestAnimationFrame(animate); 
       render();
       stats.update();
+      if(!antChase.pause)
+        antChase.updateVelocities(antChase.advanceNSteps);
     }
+    
     function render() {
-      if(!antChase.pause){
-        antChase.updateVelocities();
-      }
       renderer.render(scene, camera);
       controls.update();
+      
     } 
       
       // render();

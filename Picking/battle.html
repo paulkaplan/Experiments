@@ -1,0 +1,56 @@
+<DOCTYPE html>
+<html>
+  <head>
+    <title>Block Editor</title>
+    <meta charset="utf-8">
+    <style>* {margin:0;padding:0}</style>
+  </head>
+  <body>
+    <script src="../lib/js/underscore.js"></script>
+    <script src="../lib/js/cannon.js"></script>
+    <script src="../lib/js/dat.gui.js"></script>
+    <script src="../lib/js/three.js"></script>
+    <script src="../lib/js/detector.js"></script>
+    <script src="../lib/js/stats.js"></script>
+  </body>
+  <script src="./js/battle.js"></script>
+  <script>
+    var projector = new THREE.Projector();
+    var currentBlockType = 'single'
+    var xy = [0,0];
+    var mouse3D = new THREE.Vector3(0,0,0.5);
+ 
+    var intersects;
+    var pointLive = true;
+    var ray;
+    var makeLive = _.debounce( function(){ pointLive = true }, 100);
+    function draw(){
+      projector.unprojectVector(mouse3D, engine.camera);
+      ray = new THREE.Ray(engine.camera.position, mouse3D.subSelf(engine.camera.position).normalize());
+    }
+    window.addEventListener('mousemove', function(e){
+      xy = engine.scaleXY(e.clientX, e.clientY);
+      mouse3D.x = xy[0];
+      mouse3D.y = xy[1];
+      mouse3D.z = 0.5;
+      draw()
+    });
+    window.addEventListener('click', function(e){
+      if(e.shiftKey){
+        if(pointLive){
+          pointLive = false;
+          makeLive();
+          // Shoot a block
+          var v=new Ball(3,3 );
+              var vel = _.clone( ray.direction);
+              vel.multiplyScalar(150);
+              v.phys.position.set( ray.origin.x-1, ray.origin.y-1, ray.origin.z-1 );
+              v.phys.velocity.set( vel.x,vel.y,vel.z );
+              engine.addBody(v)
+              console.log(v.phys.velocity.x)
+        } else { console.log('too fast!')}
+      }
+    })
+    
+  </script>
+</html>
