@@ -84,16 +84,17 @@ class Engine
     @world.step( delta)
     _t = @
     _.each @underControl, (body) ->
-      if _t.keyControl.left
-        body.rotation = clamp body.rotation + delta * body.turningRadius, -body.maxTurn, body.maxTurn
-      if _t.keyControl.right
-        body.rotation = clamp body.rotation + delta * body.turningRadius, -body.maxTurn, body.maxTurn
-      if _t.keyControl.up
-        body.accel += 5
-      if _t.keyControl.down 
-        body.accel -= 2
-      body.decayAccel()
-      body.force.set body.accel*Math.sin(body.rotation), body.accel*Math.cos(body.rotation), 0
+      body.force.set( 0, 0, 0 )
+      # if _t.keyControl.left
+      #   body.rotation = clamp body.rotation + delta * body.turningRadius, -body.maxTurn, body.maxTurn
+      # if _t.keyControl.right
+      #   body.rotation = clamp body.rotation + delta * body.turningRadius, -body.maxTurn, body.maxTurn
+      # if _t.keyControl.up
+      #   body.accel += 5
+      # if _t.keyControl.down 
+      #   body.accel -= 2
+      # body.decayAccel()
+      # body.force.set body.accel*Math.sin(body.rotation), body.accel*Math.cos(body.rotation), 0
       
     @keyControl.left = @keyControl.right = @keyControl.up = false
     
@@ -198,23 +199,14 @@ class BlockView extends View
   constructor:(@type) -> 
     @geometry = new THREE.CubeGeometry( 10, 10, 10 ) if @type=='single' 
     @geometry = new THREE.CubeGeometry( 10, 20, 10 ) if @type=='double' 
-    @geometry = new THREE.CubeGeometry( 10, 30, 10 ) if @type=='long' 
-    @geometry = new THREE.CubeGeometry( 30, 10, 10 ) if @type=='longH' 
-    
-    
     @material = new THREE.MeshNormalMaterial()
     @mesh     = new THREE.Mesh( @geometry, @material )
     @mesh.useQuaternion = true
-    
 class Block extends Body
   constructor: (@type) ->
     @view = new BlockView( @type )
     @shape = new CANNON.Box(new CANNON.Vec3(5,5,5)) if @type == 'single' 
     @shape = new CANNON.Box(new CANNON.Vec3(5,10,5)) if @type == 'double' 
-    @shape = new CANNON.Box(new CANNON.Vec3(5,15,5)) if @type == 'long' 
-    @shape = new CANNON.Box(new CANNON.Vec3(15,5,5)) if @type == 'longH' 
-    
-    
     @phys = new CANNON.RigidBody 1, @shape
 class BallView extends View
   constructor:(@radius) -> 
@@ -233,6 +225,8 @@ class Ball extends Body
 engine = new Engine(world)
 
 init = () ->
+  engine = new Engine(world)
+  
   groundShape = new CANNON.Plane new CANNON.Vec3(0,0,1) 
   groundBody = new CANNON.RigidBody 0, groundShape
   segSize = 50
@@ -242,16 +236,21 @@ init = () ->
   engine.groundBody = engine.addBody new Body(groundBody, groundView)
   engine.groundBody.updateVertexMap()
   engine.ground = engine.groundBody.view.mesh
-  _(30).times (i) ->    
-    # if(Math.floor(i/16)%2==0)
-    if(i%6<3)
-      block = new Block('long')
-      block.setPosition( (i%3)*10.1,10, 10+10*Math.floor(i/3) )
-    else
-      block = new Block('longH')
-      block.setPosition( 10, (i%3)*10.1, 10+10*Math.floor(i/3) )
-    engine.addBody block
-  
+  ball = new Ball(10,1)
+  ball.setPosition(0,0,10)
+  engine.addControllableBody ball
+  # _(20).times (i) ->    
+  #   # if(Math.floor(i/16)%2==0)
+  #   block = new Block('single')
+  #   block.setPosition((i%3)*10.5, (Math.floor( i / 3)%3)*10.5,5+Math.floor(i/9)*10.5)
+  #   engine.addBody block
+    #   
+    # else
+    #   if(Math.floor(i/4)%4<3 and (i%4)<3)
+    #     block = new Block('single')
+    #     block.setPosition(5+(i%4)*10.2, 5+(Math.floor( i / 4)%4)*10.2,5+Math.floor(i/16)*10.2)
+    #     engine.addBody block
+
   window.addEventListener 'keydown', _.bind(engine.controlsDown, engine)
   window.addEventListener 'keyup', _.bind(engine.controlsUp, engine)
   
@@ -276,4 +275,4 @@ exponentialEaseOut = ( k ) ->
   return k == 1 ? 1 : - Math.pow( 2, - 10 * k ) + 1
 clamp = ( k, min, max ) ->
   return Math.max( min, Math.min( k, max) )
-ball = init()
+# ball = init()

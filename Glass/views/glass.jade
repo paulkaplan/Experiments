@@ -1,0 +1,28 @@
+extends layout
+block head
+  meta( name="viewport", content="user-scalable=0" )
+  script(type='text/javascript', src='/javascripts/fastclick.js')
+  
+block content
+  script(type='text/javascript')
+    var Query = (function(){
+        var query = {}, pair, search = location.search.substring(1).split("&"), i = search.length;
+        while (i--) {
+            pair = search[i].split("=");
+            query[pair[0]] = decodeURIComponent(pair[1]);
+        }
+        return query;
+    })();
+    
+    var socket = io.connect('http://192.168.1.125:3000');
+    socket.emit('init', {
+      glass_id : #{glass_id},
+      parent_id : Query['parent']
+    })
+    var parent = Query['parent']
+
+  #content
+    img(id="right", src="http://www.designofsignage.com/application/symbol/hospital/image/600x600/arrow-left.jpg")
+    img(id="left", src="http://www.designofsignage.com/application/symbol/hospital/image/600x600/arrow-left.jpg")
+    
+  script(type='text/javascript', src='/javascripts/glass.js')

@@ -1,0 +1,318 @@
+<DOCTYPE html>
+<html>
+  <head>
+    <title>Block Editor</title>
+    <meta charset="utf-8">
+    <style>* {margin:0;padding:0}</style>
+    <script src="../lib/js/underscore.js"></script>
+    <script src="../lib/js/cannon.js"></script>
+    <script src="../lib/js/dat.gui.js"></script>
+    <script src="../lib/js/three.js"></script>
+    <script src="../lib/js/detector.js"></script>
+    <script src="../lib/js/stats.js"></script>
+    <script src="../lib/js/OrbitControls2.js"></script>
+    <script src="../lib/js/FBOUtils.js"></script>
+    <style> html{background:#000 }</style>
+  </head>
+  <body>
+<script id="texture_vertex_simulation_shader" type="x-shader/x-vertex">
+	attribute float n;
+  // uniform int width;
+	varying vec2 vUv;
+  varying float number;
+	void main() {
+    number=n;
+		vUv = vec2(uv.x, 1.0 - uv.y);
+		gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+	}
+
+</script>
+<script id="texture_fragment_simulation_shader" type="x-shader/x-fragment">
+    // vertex.x = ( i % width ) / width ;
+    // vertex.y = Math.floor( i / width ) / height;
+	// simulation
+	varying vec2 vUv;
+	varying float number;
+  // uniform int width;
+	uniform vec3 origin;
+	uniform sampler2D tPositions;
+	
+	uniform float timer;
+
+
+	float rand(vec2 co){
+	    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+	}
+
+	void main() {
+
+		vec3 pos = texture2D( tPositions, vUv ).xyz;
+
+		if ( rand( vUv + timer ) > 0.99 ) {
+
+			pos = origin;
+
+			vec3 random = vec3( rand( vUv + 1.0 ) - 1.0, rand( vUv + 2.0 ) - 1.0, rand( vUv + 3.0 ) - 1.0 );
+			pos += normalize( random ) * rand( vUv + 1.0 );
+
+		} else {
+
+      float x = pos.x + timer;
+      float y = pos.y;
+            float z = pos.z;
+      // pos.x = 0.5;
+      float vx = pos.y - pos.x;
+      float vy = pos.z - pos.y;
+      float vz = pos.x - pos.z;
+      pos.x += sin( y * 3.3 ) * cos( z * 10.3 ) * 0.005;
+      pos.y += sin( x * 3.5 ) * cos( z * 10.5 ) * 0.005;
+      pos.z += sin( x * 3.7 ) * cos( y * 10.7 ) * 0.005;
+      //       
+      //       
+      pos.x += 0.001*vx;
+      pos.y += 0.001*vy;
+      pos.z += 0.001*vz;
+      
+		}
+    // pos.x = 0.5;
+    // pos.x = number / 1048575.0;
+    // pos.y = floor( number / (100.0) );
+    // pos.z = floor( number / (100.0*100.0));
+
+		// Write new position out
+		gl_FragColor = vec4(pos, 1);
+
+
+	}
+
+
+</script>
+
+<!-- zz85 - end simulations -->
+
+<script id="vs-particles" type="x-shader/x-vertex">
+
+	uniform sampler2D map;
+
+  uniform float width;
+	uniform float height;
+
+	uniform float pointSize;
+
+	varying vec2 vUv;
+	varying vec4 vPosition;
+	varying vec4 vColor;
+  varying vec4 fakeColor;
+	void main() {
+
+		vec2 uv = position.xy + vec2( 0.5 / width, 0.5 / height );
+    fakeColor = texture2D( map, uv );
+    vec3 color = fakeColor.rgb * 200.0 - 100.0;
+		
+		gl_PointSize = pointSize;
+		gl_Position = projectionMatrix * modelViewMatrix * vec4( color, 1.0 );
+
+	}
+
+</script>
+
+<script id="fs-particles" type="x-shader/x-fragment">
+
+	uniform vec4 pointColor;
+  varying vec4 fakeColor;
+  float rand(vec2 co){
+	    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+	}
+	void main() {
+    float r = fakeColor.r;
+    float g = fakeColor.g;
+    float b = fakeColor.b;
+		gl_FragColor = vec4(r-0.2, g-0.2, b-0.2, 0.8);
+
+	}
+
+</script>
+
+<script>
+
+	var container;
+
+	var scene, camera, light, renderer;
+	var geometry, cube, mesh, material;
+
+	var data, texture, points;
+
+	var controls;
+
+	var fboParticles, rtTexturePos, rtTexturePos2, simulationShader;
+
+	init();
+	animate();
+
+	function init() {
+
+		container = document.createElement( 'div' );
+		document.body.appendChild( container );
+
+		renderer = new THREE.WebGLRenderer();
+		renderer.setSize( window.innerWidth, window.innerHeight );
+		container.appendChild( renderer.domElement );
+
+		scene = new THREE.Scene();
+
+		camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 10000 );
+		scene.add( camera );
+
+		controls = new THREE.OrbitControls2( camera );
+		controls.radius = 800;
+		controls.speed = 3;
+
+		//
+
+		var width = 1024, height = 1024;
+		// var width = 64, height = 64;
+		// var width = 128, height = 128;
+
+		if ( ! renderer.context.getExtension( 'OES_texture_float' ) ) {
+
+			alert( 'OES_texture_float is not :(' );
+
+		}
+
+		// Start Creation of DataTexture
+		// Could it be simplified with THREE.FBOUtils.createTextureFromData(textureWidth, textureWidth, data); ?
+
+		data = new Float32Array( width * height * 3 );
+
+		texture = new THREE.DataTexture( data, width, height, THREE.RGBFormat, THREE.FloatType );
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.needsUpdate = true;
+
+		// zz85 - fbo init
+
+		rtTexturePos = new THREE.WebGLRenderTarget(width, height, {
+			wrapS:THREE.RepeatWrapping,
+			wrapT:THREE.RepeatWrapping,
+			minFilter: THREE.NearestFilter,
+			magFilter: THREE.NearestFilter,
+			format: THREE.RGBFormat,
+			type:THREE.FloatType,
+			stencilBuffer: false
+		});
+
+		rtTexturePos2 = rtTexturePos.clone();
+
+		simulationShader = new THREE.ShaderMaterial({
+
+			uniforms: {
+        // width : { type : "i", value: 1024}
+				tPositions: { type: "t", value: 0, texture: texture },
+				origin: { type: "v3", value: new THREE.Vector3() },
+				timer: { type: "f", value: 0 }
+			},
+			attributes: {
+			  n : { type : "f", value : [] }
+			},
+
+			vertexShader: document.getElementById('texture_vertex_simulation_shader').textContent,
+			fragmentShader:  document.getElementById('texture_fragment_simulation_shader').textContent
+
+		});
+
+		fboParticles = new THREE.FBOUtils( width, renderer, simulationShader );
+		fboParticles.renderToTexture(rtTexturePos, rtTexturePos2);
+
+		fboParticles.in = rtTexturePos;
+		fboParticles.out = rtTexturePos2;
+
+
+		geometry = new THREE.Geometry();
+
+		for ( var i = 0, l = width * height; i < l; i ++ ) {
+
+			var vertex = new THREE.Vector3();
+			vertex.x = ( i % width ) / width ;
+			vertex.y = Math.floor( i / width ) / height;
+			geometry.vertices.push( vertex );
+			simulationShader.attributes.n.value.push(i);
+		}
+		console.log(simulationShader.attributes.n.value[simulationShader.attributes.n.value.length-1])
+
+		material = new THREE.ShaderMaterial( {
+
+			uniforms: {
+
+				"map": { type: "t", value: 0, texture: rtTexturePos },
+				"width": { type: "f", value: width },
+				"height": { type: "f", value: height },
+
+				"pointColor": { type: "v4", value: new THREE.Vector4( 0.25, 0.50, 1.0, 0.25 ) },
+				"pointSize": { type: "f", value: 1 }
+
+			},
+			vertexShader: document.getElementById( 'vs-particles' ).textContent,
+			fragmentShader: document.getElementById( 'fs-particles' ).textContent,
+      blending: THREE.AdditiveBlending,
+			transparent: true,
+      depthWrite: false,
+      depthTest: false
+      // opacity : 0.2
+
+		} );
+
+		mesh = new THREE.ParticleSystem( geometry, material );
+		scene.add( mesh );
+
+		var gui = new dat.GUI();
+		gui.add( material.uniforms.pointColor.value, 'x', 0.0, 1.0 ).name( 'red' );
+		gui.add( material.uniforms.pointColor.value, 'y', 0.0, 1.0 ).name( 'green' );
+		gui.add( material.uniforms.pointColor.value, 'z', 0.0, 1.0 ).name( 'blue' );
+		gui.add( material.uniforms.pointColor.value, 'w', 0.0, 1.0 ).name( 'alpha' );
+		gui.add( material.uniforms.pointSize, 'value', 0.0, 10.0 ).name( 'size' );
+		gui.add( controls, 'enabled' ).name( 'auto move' );
+
+		scene.add( new THREE.Mesh( new THREE.CubeGeometry( 500, 500, 500 ), new THREE.MeshBasicMaterial( { color: 0xffffff, wireframe: true, opacity: 0.15 } ) ) );
+
+	}
+
+	function animate() {
+
+		requestAnimationFrame( animate );
+		render();
+
+	}
+
+	var timer = 0;
+
+	function render() {
+
+		timer += 0.001;
+
+		simulationShader.uniforms.timer.value = timer;
+        // simulationShader.uniforms.origin.value.x = Math.sin( timer )
+                // simulationShader.uniforms.origin.value.y = Math.cos( timer * 2.5 ) * 0.5 + 0.5;
+                // simulationShader.uniforms.origin.value.z = Math.sin( timer * 2.7 ) * 0.5 + 0.5;
+		        // simulationShader.uniforms.origin.value.x = Math.sin( timer * 2.3 ) * 0.5 + 0.5;
+		        // simulationShader.uniforms.origin.value.y = Math.cos( timer * 2.5 ) * 0.5 + 0.5;
+		        // simulationShader.uniforms.origin.value.z = Math.sin( timer * 2.7 ) * 0.5 + 0.5;
+
+		// swap
+		
+		var tmp = fboParticles.in;
+		fboParticles.in = fboParticles.out;
+		fboParticles.out = tmp;
+
+		simulationShader.uniforms.tPositions.texture = fboParticles.in;
+		fboParticles.simulate(fboParticles.out);
+		
+		material.uniforms.map.texture = fboParticles.out;
+
+		controls.update();
+
+		renderer.render( scene, camera );
+
+	}
+</script>
+</body>
+</html>

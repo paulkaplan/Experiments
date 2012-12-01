@@ -1,0 +1,95 @@
+<DOCTYPE html>
+<html>
+  <head>
+    <title>Block Editor</title>
+    <meta charset="utf-8">
+    <style>* {margin:0;padding:0}</style>
+    <script type='text/javascript' src='http://192.168.1.125:3000/socket.io/socket.io.js'></script>
+    <script src="./javascripts/players.js"></script>
+    
+  </head>
+  <body>
+    <div id="overlay"></div>
+    <script src="../../lib/js/underscore.js"></script>
+    <script src="../../lib/js/cannon.js"></script>
+    <script src="../../lib/js/dat.gui.js"></script>
+    <script src="../../lib/js/three.js"></script>
+    <script src="../../lib/js/detector.js"></script>
+    <script src="../../lib/js/stats.js"></script>
+    
+  </body>
+  <script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js'></script>
+  <script src="./javascripts/sockets.js"></script>
+  
+  <script src="./javascripts/tilt.js"></script>
+  <script src="./javascripts/modal.js"></script>
+  
+  <script>
+    var ball;
+    var controls = new SocketControls();
+        controls.init();
+    var projector = new THREE.Projector();
+    var currentBlockType = 'single'
+    var xy = [0,0];
+    var mouse3D = new THREE.Vector3(0,0,0.5);
+    var material = new THREE.MeshLambertMaterial({color:0x00ff00}) 
+    var voxelMaterial = new THREE.MeshLambertMaterial({color:0x00ff00}) 
+    
+    var marker = new THREE.Mesh( new THREE.CubeGeometry(10,10,1), material)
+    engine.scene.add(marker);
+    
+    var intersects;
+    var pointLive = false;
+    var ray;
+    function draw(){
+      projector.unprojectVector(mouse3D, engine.camera);
+      ray = new THREE.Ray(engine.camera.position, mouse3D.subSelf(engine.camera.position).normalize());
+      intersects = ray.intersectObject(engine.ground)
+      // console.log(intersects[0]);
+      if( intersects.length > 0){        
+            intersects = intersects[0]
+            intersects.point.x -= intersects.point.x % 10 - 5;
+            intersects.point.y -= intersects.point.y % 10 - 5;
+            pointLive = true;
+            pointMap = engine.groundBody.getVertexFromMap( intersects.point.x+5, 0, intersects.point.y+5 );
+            intersects.point.z = 0.5 + 10*pointMap.nBlocks;
+            marker.position.copy(intersects.point)
+      } else { pointLive = false; }
+    }
+    window.addEventListener('mousemove', function(e){
+      xy = engine.scaleXY(e.clientX, e.clientY);
+      mouse3D.x = xy[0];
+      mouse3D.y = xy[1];
+      mouse3D.z = 0.5;
+      draw()
+    });
+    window.addEventListener('click', function(e){
+      if(e.shiftKey){
+        if(pointLive){
+          pointMap = engine.groundBody.getVertexFromMap( intersects.point.x+5, 0, intersects.point.y+5 );
+        
+          var v=new Block( currentBlockType )
+              v.phys.position.set( 
+                intersects.point.x,
+                intersects.point.y,
+                intersects.point.z = 5+10*pointMap.nBlocks++
+              )
+              intersects.point.z = 0.5 + 10*pointMap.nBlocks;
+          marker.position.copy(intersects.point)
+          
+          engine.ground.vertices
+          engine.addBody(v)
+        }
+      } else {
+        // Shoot a block
+        var v=new Ball(3,3 )
+        var vel = _.clone(ray.direction);
+        vel.multiplyScalar(150);
+            v.phys.position.set( ray.origin.x-1, ray.origin.y-1, ray.origin.z-1 );
+            v.phys.velocity.set( vel.x,vel.y,vel.z );
+            engine.addBody(v)
+      }
+    })
+    
+  </script>
+</html>

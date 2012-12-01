@@ -6,14 +6,16 @@
     <style>* {margin:0;padding:0}</style>
   </head>
   <body>
-    <script src="../lib/js/underscore.js"></script>
-    <script src="../lib/js/cannon.js"></script>
-    <script src="../lib/js/dat.gui.js"></script>
-    <script src="../lib/js/three.js"></script>
-    <script src="../lib/js/detector.js"></script>
-    <script src="../lib/js/stats.js"></script>
+    <script src="../../lib/js/underscore.js"></script>
+    <script src="../../lib/js/cannon.js"></script>
+    <script src="../../lib/js/dat.gui.js"></script>
+    <script src="../../lib/js/three.js"></script>
+    <script src="../../lib/js/detector.js"></script>
+    <script src="../../lib/js/stats.js"></script>
+    <script src="../../lib/js/FirstPersonControls.js"></script>
+    
   </body>
-  <script src="./js/battle.js"></script>
+  <script src="javascripts/tilt.js"></script>
   <script>
     var projector = new THREE.Projector();
     var currentBlockType = 'single'
@@ -41,11 +43,10 @@
           pointLive = false;
           makeLive();
           // Shoot a block
-          var v=new Ball(10,3 );
+          var v=new Ball(3,3 );
               var vel = _.clone( ray.direction);
-              vel.multiplyScalar(300);
-              // var front 
-              v.phys.position.set( ray.origin.x, ray.origin.y, ray.origin.z );
+              vel.multiplyScalar(150);
+              v.phys.position.set( ray.origin.x-1, ray.origin.y-1, ray.origin.z-1 );
               v.phys.velocity.set( vel.x,vel.y,vel.z );
               engine.addBody(v)
               console.log(v.phys.velocity.x)
