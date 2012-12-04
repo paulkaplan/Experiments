@@ -41,9 +41,9 @@
           pointLive = false;
           makeLive();
           // Shoot a block
-          var v=new Ball(10,3 );
+          var v=new Ball(4,3 );
               var vel = _.clone( ray.direction);
-              vel.multiplyScalar(300);
+              vel.multiplyScalar(200);
               // var front 
               v.phys.position.set( ray.origin.x, ray.origin.y, ray.origin.z );
               v.phys.velocity.set( vel.x,vel.y,vel.z );

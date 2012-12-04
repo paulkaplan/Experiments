@@ -1,0 +1,145 @@
+<DOCTYPE html>
+<html>
+  <head>
+    <title>Block Editor</title>
+    <meta charset="utf-8">
+    <style>* {margin:0;padding:0}</style>
+  </head>
+  <body>
+    <script src="../lib/js/underscore.js"></script>
+    <script src="../lib/js/cannon.js"></script>
+    <script src="../lib/js/dat.gui.js"></script>
+    <script src="../lib/js/three.js"></script>
+    <script src="../lib/js/detector.js"></script>
+    <script src="../lib/js/stats.js"></script>
+  </body>
+  <script src="./js/physics.js"></script>
+  <script>
+    
+    var world, mass, body, shape, timeStep=1/60,
+       camera, scene, renderer, geometry, material, mesh;
+    
+    initThree();
+    initCannon();
+    animate();
+
+    function initCannon() {
+        
+        world = new CANNON.World();
+        world.gravity.set(0,0,0);
+        world.broadphase = new CANNON.NaiveBroadphase();
+        world.solver.iterations = 10;
+        
+        
+           var material = new CANNON.Material("slipperyMaterial");
+               material.friction = 0.0;
+               material.restitution = 10.0;
+               
+        floor = new CANNON.Plane(new CANNON.Vec3(0,0,1))
+        floorBody = new CANNON.RigidBody(0, floor, material)
+        floorBody.position.set(0,0,-2)
+        world.add(floorBody)
+        
+        ceilingShape = new CANNON.Plane(new CANNON.Vec3(0,0,-1))
+        ceilingBody = new CANNON.RigidBody(0,ceilingShape, material)
+        ceilingBody.position.set(0,0,10)
+        world.add(ceilingBody)
+        
+        backWallShape = new CANNON.Plane(new CANNON.Vec3(1,0,0))
+        backWallBody = new CANNON.RigidBody(0,backWallShape, material)
+        backWallBody.position.set(-10,0,0)
+        world.add(backWallBody)
+
+        frontWallShape = new CANNON.Plane(new CANNON.Vec3(-1,0,0))
+        frontWallBody = new CANNON.RigidBody(0,frontWallShape, material)
+        frontWallBody.position.set(10,0,0)
+        world.add(frontWallBody)
+        
+        leftWallShape = new CANNON.Plane(new CANNON.Vec3(0,1,0))
+        leftWallBody = new CANNON.RigidBody(0,leftWallShape, material)
+        leftWallBody.position.set(0,-10,0)
+        world.add(leftWallBody)
+
+        rightWallShape = new CANNON.Plane(new CANNON.Vec3(0,-1,0))
+        rightWallBody = new CANNON.RigidBody(0,rightWallShape, material)
+        rightWallBody.position.set(0,10,0)
+        world.add(rightWallBody)
+        
+        shape = new CANNON.Sphere(0.5)
+        mass = 1;
+        body = new CANNON.RigidBody(mass,shape, material);
+        body.velocity.set(20,20,20);
+        body.position.set(0,0,2)
+        body.linearDamping = 0;
+        //  body.angularDamping = 0;
+        world.add(body);
+        bodies.add(body);
+      
+    }
+    var Bridge = function(){
+      this.bodies = [];
+      this.addBody = function(b){
+        var mesh;
+        switch(b.type){
+          case CANNON.Shape.types.SPHERE:
+            mesh = new THREE.Mesh
+        }
+        this.bodies.push({
+          phys : b,
+          
+        })
+      }
+    }
+    function initThree() {
+
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
+        camera.position.set(10,10,10)
+        camera.lookAt(new THREE.Vector3(0,0,0));
+        camera.up.set(0,0,1);
+        scene.add( camera );
+
+        geometry = new THREE.SphereGeometry(2);
+        material = new THREE.MeshBasicMaterial( { color: 0xff0000, wireframe: true } );
+
+        mesh = new THREE.Mesh( geometry, material );
+        mesh.useQuaternion = true;
+        scene.add( mesh );
+
+
+        renderer = new THREE.WebGLRenderer();
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+        document.body.appendChild( renderer.domElement );
+
+    }
+
+    function animate() {
+
+        requestAnimationFrame( animate );
+        updatePhysics();
+        render();
+
+    }
+
+    function updatePhysics() {
+        
+        // Step the physics world
+        world.step(timeStep);
+
+        // Copy coordinates from Cannon.js to Three.js
+        body.position.copy(mesh.position);
+        body.quaternion.copy(mesh.quaternion);
+
+        // body2.position.copy(mesh2.position);
+        //  body2.quaternion.copy(mesh2.quaternion);
+    }
+
+    function render() {
+
+        renderer.render( scene, camera );
+
+    }
+  </script>
+</html>
