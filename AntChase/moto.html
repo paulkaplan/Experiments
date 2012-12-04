@@ -17,18 +17,10 @@
     
     var stats, clock, antChase, width, height, scene, camera, renderer, controls;
     scene = new THREE.Scene(); 
-    // scene.fog = new THREE.FogExp2( 0xefd1b5, 0.1 );
+    // scene.fog = new THREE.FogExp2( 0xffd100, 0.001 );
     camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.01, 40000);
     renderer = new THREE.WebGLRenderer();
-    // controls = new THREE.TrackballControls( camera, renderer.domElement );
-    // 
-    // controls.rotateSpeed = 0.5;
-    // controls.zoomSpeed = 0.5;
-    // controls.noZoom = false;
-    // controls.noPan = true;
-    // controls.dynamicDampingFactor = 0.3;
-    //      controls.minDistance = 0.1;
-    //      controls.maxDistance = 300000;
+
     
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
@@ -52,7 +44,7 @@
   	var Collectable = function(){
   	  this.geometry = new THREE.SphereGeometry(10,20,20);
   	  this.color = 0xff00ff;
-  	  this.mesh = new THREE.Mesh( this.geometry, new THREE.MeshLambertMaterial({color:this.color}))
+  	  this.mesh = new THREE.Mesh( this.geometry, new THREE.MeshNormalMaterial({color:this.color}))
   	  this.checkContact = function( pos, r ){
   	    if(this.mesh.position.distanceTo( pos ) < r ){ return true }
   	    return false;
@@ -66,9 +58,9 @@
         var quality = 0.25, z = 1.0, h = 0;
               for ( var j = 0; j < 4; j ++ ) {
           h+=Math.abs( this.perlin.noise( x / quality, y / quality, z ) * quality * 1.75 );
-          quality*=10;
+          quality*=5;
         }
-  			return 2*h;
+  			return 2.5*h;
       }
       this.scene = scene;
       this.loaded = false;
@@ -200,25 +192,7 @@
         this.root.rotation.z = -this.MAX_TILT_SIDES * this.wheelOrientation * ( this.speed / (this.MAX_SPEED-50) );
         // so do their wheels
         var _this = this;
-        if(this.loaded){
-          // var f = this.setWheelHeights()
-          // var d = f[1]-f[0];
-          // // this.body.rotation.x = Math.atan( (2*f[1]) / this.length );
-          // // this.body.position.y =  this.root.position.y - this.getWheelHeight(this.root.position)
-          // // console.log(this.root.position.y, f[0], f[1])
-          // this.wheels[0].position.y = -d*2;
-          // this.wheels[1].position.y = d*2
-        }
-        //   var xScale = (this.root.position.x+this.halfGroundSize)*this.segmentsPerSize;
-        //   var zScale = Math.floor((this.root.position.z+this.halfGroundSize)*this.segmentsPerSize);
-        //   var i = Math.floor(xScale+zScale*255);
-        //   // console.log(i,this.ground.geometry.vertices[i].z, this.root.position.z);
-        //   this.ground.geometry.vertices[i].y+=300;
-        //   this.ground.geometry.verticesNeedUpdate = true;
-        // }
-        // this.root.rotation.x = - this.MAX_TILT_FRONTBACK * this.acceleration;
-        
-        // wheel rotation
+
         var angularSpeedRatio = 1 / (2.5*this.length/this.wheelSize)
 
         		var wheelDelta = forwardDelta * angularSpeedRatio;
@@ -261,22 +235,22 @@
       for ( var i = 0, l = this.groundGeo.vertices.length; i < l; i++ ) {
         var width = this.groundGeo.width;
        var x = i % width, y = ~~ ( i / width );
-              this.groundGeo.vertices[ i ].y = data[i]*2;
+              this.groundGeo.vertices[ i ].y = data[i]*2.5;
       }
-      this.groundBuffer = new THREE.PlaneGeometry( 7500, 7500, worldWidth - 1, worldDepth - 1 );
-			this.groundBuffer.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
-
-      for ( var i = 0, l = this.groundGeo.vertices.length; i < l; i++ ) {
-        var width = this.groundGeo.width;
-       var x = i % width, y = ~~ ( i / width );
-              this.groundBuffer.vertices[ i ].y = data[i]*2;
-      }
-      this.groundBuffer = new THREE.Mesh( this.groundBuffer, new THREE.MeshLambertMaterial( {wireframe:true} ) );
+      //       this.groundBuffer = new THREE.PlaneGeometry( 7500, 7500, worldWidth - 1, worldDepth - 1 );
+      // this.groundBuffer.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
+      // 
+      //       for ( var i = 0, l = this.groundGeo.vertices.length; i < l; i++ ) {
+      //         var width = this.groundGeo.width;
+      //        var x = i % width, y = ~~ ( i / width );
+      //               this.groundBuffer.vertices[ i ].y = data[i]*2;
+      //       }
+      // this.groundBuffer = new THREE.Mesh( this.groundBuffer, new THREE.MeshLambertMaterial( {wireframe:true} ) );
 			
-      // this.texture = new THREE.Texture( generateTexture( data, worldWidth, worldDepth ), new THREE.UVMapping(), THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping );
-      // this.texture.needsUpdate = true;
+      this.texture = new THREE.Texture( generateTexture( data, worldWidth, worldDepth ), new THREE.UVMapping(), THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping );
+      this.texture.needsUpdate = true;
 
-			this.ground = new THREE.Mesh( this.groundGeo, new THREE.MeshLambertMaterial( {wireframe:true} ) );
+			this.ground = new THREE.Mesh( this.groundGeo, new THREE.MeshLambertMaterial( {wireframe:true,map : this.texture} ) );
       this.angVel = 0;
       this.wheels = [];
       var _this = this;
@@ -296,8 +270,8 @@
         
         _.each(powerups, function(p){
           scene.add(p.mesh);
-          p.mesh.position.x = Math.random()*1000;
-          p.mesh.position.z = Math.random()*1000;          // 
+          p.mesh.position.x = Math.random()*3000-1500;
+          p.mesh.position.z = Math.random()*3000-1500;          // 
                     var xScale = (p.mesh.position.x + mouse.halfGroundSize)*mouse.segmentsPerSize;
                     var zScale = (p.mesh.position.z + mouse.halfGroundSize)*mouse.segmentsPerSize;
           p.mesh.position.y = 10+mouse.lookUpHeight(xScale,zScale);
@@ -316,6 +290,7 @@
       // antChase.createAnts();  
       camera.position.x = 100;
       camera.position.z = 100;
+      camera.position.y = 100;
       var gui = new dat.GUI();
       mouse = new Mouse();
       mouse.init();
@@ -328,6 +303,7 @@
             scene.add( directionalLight2 );
       _.each(mouse.wheels,function(wheel){ mouse.root.add(wheel) });
       mouse.root.add(mouse.body)
+      // mouse.updateCarModel(0,ke
       scene.add( mouse.root);
        // mouse.groundBuffer.position.y = -10000;
        // scene.add(mouse.)
@@ -364,12 +340,12 @@
     }
     function render() {
       renderer.render(scene, camera);
-      camera.position.y = mouse.root.position.y+80;
-      if(Math.abs(mouse.root.position.x-camera.position.x)>50){
-        camera.position.x +=((mouse.root.position.x-camera.position.x)/30);
+      camera.position.y = 140
+      if(Math.abs(mouse.root.position.x-camera.position.x)>10){
+        camera.position.x +=((mouse.root.position.x-camera.position.x)/40);
       }
-      if(Math.abs(mouse.root.position.z-camera.position.z)>50){
-        camera.position.z +=((mouse.root.position.z-camera.position.z)/30);
+      if(Math.abs(mouse.root.position.z-camera.position.z)>10){
+        camera.position.z +=((mouse.root.position.z-camera.position.z)/40);
       }
       // mouse.updateTerrain();
       mouse.updateCarModel(clock.getDelta(), keypad);
@@ -427,7 +403,7 @@
         
                  }
         
-                 quality *= 10;
+                 quality *= 5;
         
                }
         
