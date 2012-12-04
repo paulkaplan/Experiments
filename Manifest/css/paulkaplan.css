@@ -29,10 +29,23 @@ ol li, ol ul, ol ol {
   list-style-type: none;
   margin-left: 0.5em;
 }
-a { text-decoration: none; color:#222}
+a {color:#fff}
 .row + .row { margin-top:2em;}
 .footer { min-height:3em; }
 /*p { padding:0.2em;}*/
+
+#credit {
+  color:#fff;
+  background-color:rgba(255,255,255,0.1);
+  position:absolute;
+  top:0;
+  right:0;
+  padding:1em;
+  z-index:10000;
+}
+canvas { position:absolute; top:0; left:0;}
+
+
 @media handheld, only screen and (max-width: 767px) {
    body {
      margin-top: 2.75em;
