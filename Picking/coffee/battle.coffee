@@ -245,12 +245,17 @@ init = () ->
   _(30).times (i) ->    
     # if(Math.floor(i/16)%2==0)
     if(i%6<3)
-      block = new Block('long')
-      block.setPosition( (i%3)*10.1,10, 10+10*Math.floor(i/3) )
+      if((i+1)%2!=0)
+        block = new Block('long')
+        block.setPosition( (i%3)*10.1,10, 10+10*Math.floor(i/3) )
+        engine.addBody block
+        
     else
-      block = new Block('longH')
-      block.setPosition( 10, (i%3)*10.1, 10+10*Math.floor(i/3) )
-    engine.addBody block
+      if((i)%2!=0)
+      
+        block = new Block('longH')
+        block.setPosition( 10, (i%3)*10.1, 10+10*Math.floor(i/3) )
+        engine.addBody block
   
   window.addEventListener 'keydown', _.bind(engine.controlsDown, engine)
   window.addEventListener 'keyup', _.bind(engine.controlsUp, engine)

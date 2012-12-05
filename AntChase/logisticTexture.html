@@ -1,0 +1,484 @@
+<html> 
+  <head> 
+    <title>Ant Chase with custom shaders| Paul Kaplan</title>
+    <style>html{background:#000; } canvas { width: 100%; height: 100% }</style> 
+  </head>
+  <body>
+    
+    <script src="js/three.js"></script> 
+    
+    <script src="js/dat.gui.min.js"></script>
+    <script src="js/stats.min.js"></script>
+    <script src="js/underscore.js"></script>
+    <script src="js/improvednoise.js"></script>
+		
+   
+    <script>
+    
+    var stats, clock, antChase, width, height, scene, camera, renderer, controls;
+    scene = new THREE.Scene(); 
+    // scene.fog = new THREE.FogExp2( 0xffd100, 0.001 );
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.01, 40000);
+    renderer = new THREE.WebGLRenderer();
+
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+    
+    stats = new Stats();
+            stats.setMode(0);
+    				stats.domElement.style.position = 'absolute';
+    				stats.domElement.style.top = '0px';
+    				document.body.appendChild( stats.domElement );				
+    				
+    width = window.innerWidth;
+    height = window.innerHeight;
+    var worldWidth = 128, worldDepth = 128,
+		worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
+    data = generateHeight( worldWidth, worldDepth );
+		function quadraticEaseOut( k ) { return - k * ( k - 2 ); }
+  	function cubicEaseOut( k ) { return --k * k * k + 1; }
+  	function circularEaseOut( k ) { return Math.sqrt( 1 - --k * k ); }
+  	function sinusoidalEaseOut( k ) { return Math.sin( k * Math.PI / 2 ); }
+  	function exponentialEaseOut( k ) { return k === 1 ? 1 : - Math.pow( 2, - 10 * k ) + 1; }
+  	var Collectable = function(){
+  	  this.geometry = new THREE.SphereGeometry(10,20,20);
+  	  this.color = 0xff00ff;
+  	  this.mesh = new THREE.Mesh( this.geometry, new THREE.MeshNormalMaterial({color:this.color}))
+  	  this.checkContact = function( pos, r ){
+  	    if(this.mesh.position.distanceTo( pos ) < r ){ return true }
+  	    return false;
+  	  }
+  	}
+    var Mouse = function(){
+      this.perlin = new ImprovedNoise();
+
+      this.lookUpHeight = function(x,y){
+        var width = mouse.ground.geometry.widthSegments;
+        var quality = 0.25, z = 1.0, h = 0;
+              for ( var j = 0; j < 4; j ++ ) {
+          h+=Math.abs( this.perlin.noise( x / quality, y / quality, z ) * quality * 1.75 );
+          quality*=5;
+        }
+  			return 2.5*h;
+      }
+      this.scene = scene;
+      this.loaded = false;
+      this.MAX_SPEED = 500;
+      	this.MAX_REVERSE_SPEED = -100;
+
+      	this.MAX_WHEEL_ROTATION = 0.7;
+
+      	this.FRONT_ACCELERATION = 550;
+      	this.BACK_ACCELERATION = 700;
+
+      	this.WHEEL_ANGULAR_ACCELERATION = 2.5;
+
+      	this.FRONT_DECCELERATION = 750;
+      	this.WHEEL_ANGULAR_DECCELERATION = 1.0;
+
+      	this.STEERING_RADIUS_RATIO = 0.0043;
+
+      	this.MAX_TILT_SIDES = 0.95;
+      	this.MAX_TILT_FRONTBACK = 0.015;
+
+      	// internal control variables
+
+      	this.speed = 0;
+      	this.acceleration = 0;
+
+      	this.wheelOrientation = 0;
+      	this.carOrientation = 0;
+      
+      this.updateCarModel = function ( delta, controls ) {
+
+    		// speed and wheels based on controls
+    		// Also tilt
+
+    		if ( controls.moveForward ) {
+
+    			this.speed = THREE.Math.clamp( this.speed + delta * this.FRONT_ACCELERATION, this.MAX_REVERSE_SPEED, this.MAX_SPEED );
+    			this.acceleration = THREE.Math.clamp( this.acceleration + delta, -1, 1 );
+          
+    		}
+
+    		if ( controls.moveBackward ) {
+
+
+    			this.speed = THREE.Math.clamp( this.speed - delta * this.BACK_ACCELERATION, this.MAX_REVERSE_SPEED, this.MAX_SPEED );
+    			this.acceleration = THREE.Math.clamp( this.acceleration - delta, -1, 1 );
+
+    		}
+
+    		if ( controls.moveLeft ) {
+
+          this.wheelOrientation = THREE.Math.clamp( this.wheelOrientation + delta * this.WHEEL_ANGULAR_ACCELERATION, - this.MAX_WHEEL_ROTATION, this.MAX_WHEEL_ROTATION );
+          // this.wheelOrientation  =  Math.PI / 2;
+          
+    		}
+
+    		if ( controls.moveRight ) {
+
+          this.wheelOrientation = THREE.Math.clamp( this.wheelOrientation - delta * this.WHEEL_ANGULAR_ACCELERATION, - this.MAX_WHEEL_ROTATION, this.MAX_WHEEL_ROTATION );
+          // this.wheelOrientation  = -Math.PI / 2;
+
+    		}
+
+        //speed decay
+        
+        if ( ! ( controls.moveForward || controls.moveBackward ) ) {
+        
+         if ( this.speed > 0 ) {
+        i
+           var k = exponentialEaseOut( this.speed / this.MAX_SPEED );
+        
+           this.speed = THREE.Math.clamp( this.speed - k * delta * this.FRONT_DECCELERATION, 0, this.MAX_SPEED );
+           this.acceleration = THREE.Math.clamp( this.acceleration - k * delta, 0, 1 );
+        
+         } else {
+        
+           var k = exponentialEaseOut( this.speed / this.MAX_REVERSE_SPEED );
+        
+           this.speed = THREE.Math.clamp( this.speed + k * delta * this.BACK_ACCELERATION, this.MAX_REVERSE_SPEED, 0 );
+           this.acceleration = THREE.Math.clamp( this.acceleration + k * delta, -1, 0 );
+        
+         }
+        
+        
+        }
+
+        // steering decay
+        
+        if ( ! ( controls.moveLeft || controls.moveRight ) ) {
+        
+         if ( this.wheelOrientation > 0 ) {
+        
+           this.wheelOrientation = THREE.Math.clamp( this.wheelOrientation - delta * this.WHEEL_ANGULAR_DECCELERATION, 0, this.MAX_WHEEL_ROTATION );
+        
+         } else {
+        
+           this.wheelOrientation = THREE.Math.clamp( this.wheelOrientation + delta * this.WHEEL_ANGULAR_DECCELERATION, - this.MAX_WHEEL_ROTATION, 0 );
+        
+         }
+        
+        }
+        
+        // if ( ! ( controls.moveLeft || controls.moveRight ) ) {
+        //   this.wheelOrientation = 0;
+        // 
+        // } else { 
+        //   controls.moveRight = controls.moveLeft = false;
+        // }
+    		// car update
+
+    		var forwardDelta = this.speed * delta;
+
+        this.carOrientation += ( forwardDelta * this.STEERING_RADIUS_RATIO ) * this.wheelOrientation;
+        // this.carOrientation += this.wheelOrientation;
+
+    		// displacement
+
+    		this.root.position.x += Math.sin( this.carOrientation ) * forwardDelta;
+    		this.root.position.z += Math.cos( this.carOrientation ) * forwardDelta;
+        
+        // heightc
+        var xScale = (this.root.position.x + this.halfGroundSize)*this.segmentsPerSize;
+        var zScale = (this.root.position.z + this.halfGroundSize)*this.segmentsPerSize;
+        this.root.position.y = this.wheelSize+this.lookUpHeight(xScale,zScale);    		
+        
+        // steering
+        this.root.rotation.y = this.carOrientation;
+        // motorcycles tilt in
+        this.root.rotation.z = -this.MAX_TILT_SIDES * this.wheelOrientation * ( this.speed / (this.MAX_SPEED-50) );
+        // so do their wheels
+        var _this = this;
+
+        var angularSpeedRatio = 1 / (2.5*this.length/this.wheelSize)
+
+        		var wheelDelta = forwardDelta * angularSpeedRatio;
+            if(this.loaded){
+              _.each(this.wheels,function(wheel){
+                wheel.rotation.x += wheelDelta;
+              })
+            }
+    	};
+      this.material = new THREE.MeshNormalMaterial({
+          // uniforms:       this.uniforms,
+          // attributes:     this.attributes,
+          // vertexShader:   vertShader,
+          // fragmentShader: fragShader,
+          // transparent:true,
+          // depthTest:false
+          wireframe:true
+        });
+      this.wheelSize = 10;
+      this.wheelBase = this.wheelSize*5;
+      this.length    = this.wheelBase*2;
+      this.speedScale = 0.05;
+      this.geometry = new THREE.CylinderGeometry(this.wheelSize,this.wheelSize,this.wheelSize/10, 10,10);
+      this.geometry.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
+      this.geometry.applyMatrix( new THREE.Matrix4().makeRotationY( - Math.PI / 2 ) );
+      
+			this.root = new THREE.Mesh( new THREE.CubeGeometry(1,1,this.wheelBase,1), new THREE.MeshNormalMaterial({wireframe:true}));
+			this.root.position.y+=this.wheelSize;
+      this.body = new THREE.Mesh( new THREE.CylinderGeometry(this.wheelSize/1.5, this.wheelSize/4,this.wheelBase-2*this.wheelSize, 10,10), new THREE.MeshNormalMaterial({color:0x88aa88, wireframe:true}));
+      this.body.rotation.z = -Math.PI/2
+      this.body.rotation.y = -Math.PI/2
+      
+      // this.body = new THREE.Mesh( new THREE.CubeGeometry(this.wheelBase/4, this.wheelSize, this.wheelBase-2*this.wheelSize), new THREE.MeshNormalMaterial({color:0x88aa88,wireframe:true}));
+			this.body.position.y+=this.wheelSize/2;
+			
+      // this.geometry.dynamic = true;
+      this.groundGeo = new THREE.PlaneGeometry( 7500, 7500, worldWidth - 1, worldDepth - 1 );
+			this.groundGeo.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
+
+      for ( var i = 0, l = this.groundGeo.vertices.length; i < l; i++ ) {
+        var width = this.groundGeo.width;
+       var x = i % width, y = ~~ ( i / width );
+              this.groundGeo.vertices[ i ].y = data[i]*2.5;
+      }
+      //       this.groundBuffer = new THREE.PlaneGeometry( 7500, 7500, worldWidth - 1, worldDepth - 1 );
+      // this.groundBuffer.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
+      // 
+      //       for ( var i = 0, l = this.groundGeo.vertices.length; i < l; i++ ) {
+      //         var width = this.groundGeo.width;
+      //        var x = i % width, y = ~~ ( i / width );
+      //               this.groundBuffer.vertices[ i ].y = data[i]*2;
+      //       }
+      // this.groundBuffer = new THREE.Mesh( this.groundBuffer, new THREE.MeshLambertMaterial( {wireframe:true} ) );
+			
+      this.texture = new THREE.Texture( generateTexture( data, worldWidth, worldDepth ), new THREE.UVMapping(), THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping );
+      this.texture.needsUpdate = true;
+
+			this.ground = new THREE.Mesh( this.groundGeo, new THREE.MeshLambertMaterial( {wireframe:true,map : this.texture} ) );
+      this.angVel = 0;
+      this.wheels = [];
+      var _this = this;
+      this.halfGroundSize = this.ground.geometry.width/2.0;
+      this.segmentsPerSize = this.ground.geometry.widthSegments / this.ground.geometry.width;
+      this.init = function(){
+        _(2).times(function(n){
+          var newWheel = new THREE.Mesh( _this.geometry, _this.material);
+          newWheel.position.x = 0;
+          newWheel.position.z = n*_this.wheelBase-_this.wheelBase/2
+          _this.wheels.push( newWheel );
+        })
+        this.loaded = true;
+        requestAnimationFrame( animate );
+        _(100).times( function(){ powerups.push( new Collectable() ) });
+        // _.each(powerups, function(p){
+        
+        _.each(powerups, function(p){
+          scene.add(p.mesh);
+          p.mesh.position.x = Math.random()*3000-1500;
+          p.mesh.position.z = Math.random()*3000-1500;          // 
+                    var xScale = (p.mesh.position.x + mouse.halfGroundSize)*mouse.segmentsPerSize;
+                    var zScale = (p.mesh.position.z + mouse.halfGroundSize)*mouse.segmentsPerSize;
+          p.mesh.position.y = 10+mouse.lookUpHeight(xScale,zScale);
+          // p.mesh.position.y = 
+        })
+      }
+    }
+    function clamp(v,min,max){
+      if(v>=max){return max}
+      if(v<=min){return min}
+      else return v;
+    }
+    var mouse, powerups = [];
+    window.onload = function(){
+      // antChase = new AntChase({'scene':scene});
+      // antChase.createAnts();  
+      camera.position.x = 100;
+      camera.position.z = 100;
+      camera.position.y = 100;
+      var gui = new dat.GUI();
+      mouse = new Mouse();
+      mouse.init();
+      // scene.add( sm );
+      var directionalLight1 = new THREE.DirectionalLight( 0xffffff, 2 ); 
+            directionalLight1.position.set( 1, 2, -width ).normalize();
+            var directionalLight2 = new THREE.DirectionalLight( 0xffffff, 2 ); 
+            directionalLight2.position.set( 0,1,0 ).normalize(); 
+            // scene.add( directionalLight1 );
+            scene.add( directionalLight2 );
+      _.each(mouse.wheels,function(wheel){ mouse.root.add(wheel) });
+      mouse.root.add(mouse.body)
+      // mouse.updateCarModel(0,ke
+      scene.add( mouse.root);
+       // mouse.groundBuffer.position.y = -10000;
+       // scene.add(mouse.)
+      // scene.add( mouse.groundBuffer )
+      
+      scene.add( mouse.ground );
+      camera.lookAt(mouse.root.position)
+    }
+    var mousePosition = new THREE.Vector3(0,0,0);
+    function animate(){
+      _.each(powerups, function(p){ 
+        if(p.checkContact( mouse.root.position, mouse.wheelSize*3 )){
+          scene.remove( p.mesh )
+        }
+      })
+      requestAnimationFrame(animate); 
+      render();
+      stats.update();
+    }
+    var n = 0;
+    var vert=0;
+
+    var clock = new THREE.Clock();
+    // function
+    var projector = new THREE.Projector();
+    var stopLeft = true; var stopRight = true;
+    var accel = false; var slow = false;
+    // mouse.angVel=0.01
+    var keypad = {
+      'moveForward' : false,
+      'moveBackward' : false,
+      'moveLeft' : false,
+      'moveRight' : false,
+    }
+    function render() {
+      renderer.render(scene, camera);
+      camera.position.y = 140
+      if(Math.abs(mouse.root.position.x-camera.position.x)>10){
+        camera.position.x +=((mouse.root.position.x-camera.position.x)/40);
+      }
+      if(Math.abs(mouse.root.position.z-camera.position.z)>10){
+        camera.position.z +=((mouse.root.position.z-camera.position.z)/40);
+      }
+      // mouse.updateTerrain();
+      mouse.updateCarModel(clock.getDelta(), keypad);
+      if(mouse.root.position.z > 3000 ){ 
+        mouse.groundBuffer.position.copy( mouse.ground.position );
+        mouse.groundBuffer.position.z = mouse.root.position.z;
+        mouse.groundBuffer.position.x = mouse.root.position.x;
+      }
+      camera.lookAt(mouse.root.position)
+    } 
+    var projector = new THREE.Projector();
+
+    var key = {
+      'l': 37,
+      'u': 38,
+      'r': 39,
+      'd': 40,
+    }
+    window.addEventListener( 'keydown', function(e){
+            // console.log(e)
+            // this.keys = [ 65 /*A*/, 83 /*S*/, 68 /*D*/ ];
+          	if(e.keyCode == key.l){ keypad.moveLeft = true }
+          	else if (e.keyCode == key.r){ keypad.moveRight = true}
+          	else if (e.keyCode == key.u){ keypad.moveForward = true }
+          	else if (e.keyCode == key.d){ keypad.moveBackward = true }
+          	
+    }, false);
+    window.addEventListener( 'keyup', function(e){
+      // this.keys = [ 65 /*A*/, 83 /*S*/, 68 /*D*/ ];
+    	if(e.keyCode == key.l){ keypad.moveLeft = false }
+    	else if (e.keyCode == key.r){ keypad.moveRight = false}
+    	else if (e.keyCode == key.u){ keypad.moveForward = false }
+    	else if (e.keyCode == key.d){ keypad.moveBackward = false }
+    }, false);
+    var lerp = function(x,y,t){ return x + ( y - x ) * t; }
+    
+    function generateHeight( width, height ) {
+       function lerp(x,y,t){ return x + ( y - x ) * t; }
+        var x0 = Math.random()
+               var size = width * height, data = new Float32Array( size ),
+               perlin = new ImprovedNoise(), quality = 0.25, z = 1.0;
+               var rMin = 3.6;
+               var rMax = 4.0;
+               var rStep = (rMax-rMin)/size;
+               var r = rMin;
+               for ( var i = 0; i < size; i ++ ) {
+        
+                 data[ i ] = 0
+        
+               }
+               for ( var j = 0; j < 4; j ++ ) {
+                 var x0 = Math.random()
+                 r+=0.01
+                 for ( var i = 0; i < size; i ++ ) {
+                   // r+=rStep
+                   var x = i % width, y = ~~ ( i / width );
+                   x0 = r*(x0)*(1-x0);
+                    data[ i ] += lerp(0,12, x0);
+                 }
+        
+                 quality *= 5;
+        
+               }
+        
+               return data;
+        
+             }
+        
+             function generateTexture( data, width, height ) {
+        
+               var canvas, canvasScaled, context, image, imageData,
+               level, diff, vector3, sun, shade;
+        
+               vector3 = new THREE.Vector3( 0, 0, 0 );
+        
+               sun = new THREE.Vector3( 1, 1, 1 );
+               sun.normalize();
+        
+               canvas = document.createElement( 'canvas' );
+               canvas.width = width;
+               canvas.height = height;
+        
+               context = canvas.getContext( '2d' );
+               context.fillStyle = '#000';
+               context.fillRect( 0, 0, width, height );
+        
+               image = context.getImageData( 0, 0, canvas.width, canvas.height );
+               imageData = image.data;
+        
+               for ( var i = 0, j = 0, l = imageData.length; i < l; i += 4, j ++ ) {
+        
+                 vector3.x = data[ j - 2 ] - data[ j + 2 ];
+                 vector3.y = 2;
+                 vector3.z = data[ j - width * 2 ] - data[ j + width * 2 ];
+                 vector3.normalize();
+        
+                 shade = vector3.dot( sun );
+        
+                 imageData[ i ] = ( 96 + shade * 128 ) * ( 0.5 + data[ j ] * 0.007 );
+                 imageData[ i + 1 ] = ( 32 + shade * 96 ) * ( 0.5 + data[ j ] * 0.007 );
+                 imageData[ i + 2 ] = ( shade * 96 ) * ( 0.5 + data[ j ] * 0.007 );
+               }
+        
+               context.putImageData( image, 0, 0 );
+        
+               // Scaled 4x
+        
+               canvasScaled = document.createElement( 'canvas' );
+               canvasScaled.width = width * 4;
+               canvasScaled.height = height * 4;
+        
+               context = canvasScaled.getContext( '2d' );
+               context.scale( 4, 4 );
+               context.drawImage( canvas, 0, 0 );
+        
+               image = context.getImageData( 0, 0, canvasScaled.width, canvasScaled.height );
+               imageData = image.data;
+        
+               for ( var i = 0, l = imageData.length; i < l; i += 4 ) {
+        
+                 var v = ~~ ( Math.random() * 5 );
+        
+                 imageData[ i ] += v;
+                 imageData[ i + 1 ] += v;
+                 imageData[ i + 2 ] += v;
+        
+               }
+        
+               context.putImageData( image, 0, 0 );
+        
+               return canvasScaled;
+        
+             }
+    </script>
+  </body>
+</html>
