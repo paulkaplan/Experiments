@@ -1,0 +1,117 @@
+<DOCTYPE html>
+<html>
+  <head>
+    <title>Block Editor</title>
+    <meta charset="utf-8">
+    <style>* {margin:0;padding:0}</style>
+  </head>
+  <body>
+    <script src="../lib/js/underscore.js"></script>
+    <script src="../lib/js/cannon.js"></script>
+    <script src="../lib/js/dat.gui.js"></script>
+    <script src="../lib/js/three.js"></script>
+    <script src="../lib/js/detector.js"></script>
+    <script src="../lib/js/stats.js"></script>
+    <script src="https://raw.github.com/paulkaplan/Engine.js/master/build/engine.js"></script>
+    <div id="container"></div>
+  </body>
+  <script>
+    
+    var world, mass, body, shape, timeStep=1/60,
+       camera, scene, renderer, engine, Video, videoTexture, container, cubeVideo, videoURL, ctx;
+       var Ball = function(params){
+           this.radius = params['radius'];
+           this.mass   = params['mass'];
+           this.geom = new THREE.CubeGeometry(6, 6, 6);
+           this.material = new THREE.MeshPhongMaterial({ 
+             color : 0xfffff,
+             // map : videoTexture,
+             envMap : cubeVideo
+           });
+           this.mesh = new THREE.Mesh(this.geom, this.material);
+           this.phys     = new CANNON.RigidBody( this.mass, new CANNON.Box( new CANNON.Vec3(3,3,3)) )
+       }
+       __extends(Ball, Engine.Body)
+
+    startCamera()
+    function startCamera()
+    {
+    	if (!navigator.getUserMedia)
+    	{
+    		navigator.getUserMedia = (function() {
+    			return 	navigator.webkitGetUserMedia ||
+    					navigator.mozGetUserMedia ||
+    					navigator.msGetUserMedia ||
+    					false;
+    		})();
+    	}
+    	navigator.getUserMedia({ video: true, audio: true }, cameraGranted, cameraDenied);
+    }
+
+    function cameraGranted(stream)
+    {
+    	//video.autoplay = true;
+    	//video.src = (window.webkitURL) ? window.webkitURL.createObjectURL(stream) : stream;
+      var canvas = document.createElement('canvas')
+          canvas.width = 512;
+          canvas.height = 512;
+      ctx = canvas.getContext('2d');
+
+      container = document.getElementById('container');
+    	Video = document.createElement('video');
+    	Video.width = container.clientWidth;
+    	Video.height = container.clientHeight;
+    	Video.autoplay = true;
+      
+    	Video.src = (window.webkitURL) ? window.webkitURL.createObjectURL(stream) : stream;
+    	initThree();
+    }
+    function cameraDenied(){ alert('no dice'); }
+
+    function initThree() {
+      
+      // videoTexture = new THREE.Texture(Video);
+      cubeVideo = new THREE.Texture()
+      cubeVideo.image = [Video,Video,Video,Video,Video,Video];
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
+        camera.position.set(10,10,10)
+        renderer = new THREE.WebGLRenderer();
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        
+        document.body.appendChild( renderer.domElement );
+        scene.add( new THREE.AmbientLight(0xffffff,0.1) );
+        initCannon();
+    }
+    
+    function initCannon() {
+        engine = new Engine( scene );
+        engine.addGround();
+        engine.addControls(camera, renderer.domElement);
+        
+        var ball = new Ball({ mass:5, radius:3});
+        ball.setPosition(0,5,0);
+        engine.addBody( ball );
+        animate();
+    }
+
+    function animate() {
+
+        requestAnimationFrame( animate );
+        engine.update();
+        render();
+        // in the render loop
+        ctx.drawImage(Video,0,0, 512, 512);
+        var img = ctx.getImageData(0,0,512,512);
+        cubeVideo.image = [img,img,img,img,img,img];
+        if (Video.readyState === Video.HAVE_ENOUGH_DATA)
+          cubeVideo.needsUpdate = true;
+    }
+
+    function render() {
+
+        renderer.render( scene, camera );
+
+    }
+  </script>
+</html>

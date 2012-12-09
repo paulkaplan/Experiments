@@ -1,0 +1,165 @@
+<body>
+  <div id="loudness"></div>
+  <canvas width=512 height=512 id="c"></canvas>
+</body>
+
+<script>
+var audioContext = new webkitAudioContext();
+var isPlaying = false;
+var sourceNode = null;
+var analyser = null;
+var theBuffer = null;
+var detectorElem, 
+	canvas,
+	pitchElem,
+	noteElem,
+	detuneElem,
+	detuneAmount, ctx;
+
+window.onload = function() {
+  detectorElem = document.getElementById("loudness");
+  canvas = document.getElementById("c");
+  ctx = canvas.getContext("2d");
+  
+  toggleLiveInput();
+	
+
+}
+
+function convertToMono( input ) {
+    var splitter = audioContext.createChannelSplitter(2);
+    var merger = audioContext.createChannelMerger(2);
+
+    input.connect( splitter );
+    splitter.connect( merger, 0, 0 );
+    splitter.connect( merger, 0, 1 );
+    return merger;
+}
+
+function error() {
+    alert('Stream generation failed.');
+}
+
+function getUserMedia(dictionary, callback) {
+    try {
+        navigator.webkitGetUserMedia(dictionary, callback, error);
+    } catch (e) {
+        alert('webkitGetUserMedia threw exception :' + e);
+    }
+}
+
+function gotStream(stream) {
+    // Create an AudioNode from the stream.
+    var mediaStreamSource = audioContext.createMediaStreamSource(stream);
+
+    // Connect it to the destination.
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+    convertToMono( mediaStreamSource ).connect( analyser );
+    updatePitch();
+}
+
+function toggleLiveInput() {
+    getUserMedia({audio:true}, gotStream);
+}
+
+var rafID = null;
+var tracks = null;
+var buflen = 1024;
+var buf = new Uint8Array( buflen );
+var MINVAL = 134;  // 128 == zero.  MINVAL is the "minimum detected signal" level.
+
+function findNextPositiveZeroCrossing( start ) {
+	var i = Math.ceil( start );
+	var last_zero = -1;
+	// advance until we're zero or negative
+	while (i<buflen && (buf[i] > 128 ) )
+		i++;
+	if (i>=buflen)
+		return -1;
+
+	// advance until we're above MINVAL, keeping track of last zero.
+	while (i<buflen && ((t=buf[i]) < MINVAL )) {
+		if (t >= 128) {
+			if (last_zero == -1)
+				last_zero = i;
+		} else
+			last_zero = -1;
+		i++;
+	}
+
+	// we may have jumped over MINVAL in one sample.
+	if (last_zero == -1)
+		last_zero = i;
+
+	if (i==buflen)	// We didn't find any more positive zero crossings
+		return -1;
+
+	// The first sample might be a zero.  If so, return it.
+	if (last_zero == 0)
+		return 0;
+
+	// Otherwise, the zero might be between two values, so we need to scale it.
+
+	var t = ( 128 - buf[last_zero-1] ) / (buf[last_zero] - buf[last_zero-1]);
+	return last_zero+t;
+}
+
+var noteStrings = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+function noteFromPitch( frequency ) {
+	var noteNum = 12 * (Math.log( frequency / 440 )/Math.log(2) );
+	return Math.round( noteNum ) + 69;
+}
+
+function frequencyFromNoteNumber( note ) {
+	return 440 * Math.pow(2,(note-69)/12);
+}
+
+function centsOffFromPitch( frequency, note ) {
+	return Math.floor( 1200 * Math.log( frequency / frequencyFromNoteNumber( note ))/Math.log(2) );
+}
+
+function updatePitch( time ) {
+
+	var cycles = new Array;
+	analyser.getByteTimeDomainData( buf );
+  // This graph has 30 bars.
+  var num_bars = 30;
+  var max = 0;
+
+  // Clear the canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  var bar_width = canvas.width / num_bars;
+
+  // Break the samples up into bins
+  var bin_size = Math.floor( buflen / num_bars);
+  for (var i=0; i < num_bars; ++i) {
+    var sum = 0;
+    for (var j=0; j < bin_size; ++j) {
+      sum += buf[(i * bin_size) + j];
+    }
+    // Calculate the average frequency of the samples in the bin
+    var average = sum / bin_size;
+
+    // Draw the bars on the canvas
+
+    if(average>max){ max = average; }
+  }
+  var scaled_average = (average / 256 - 0.5) * canvas.height;
+  
+  ctx.fillRect(bar_width, canvas.height, bar_width - 2,
+                       -scaled_average);
+
+  // console.log( 
+  //  "Cycles: " + num_cycles + 
+  //  " - average length: " + sum + 
+  //  " - pitch: " + pitch + "Hz " +
+  //  " - note: " + noteFromPitch( pitch ) +
+  //  " - confidence: " + confidence + "% "
+  //  );
+	// possible other approach to confidence: sort the array, take the median; go through the array and compute the average deviation
+
+	rafID = window.webkitRequestAnimationFrame( updatePitch );
+}
+</script>
