@@ -62,7 +62,7 @@ Engine = (function() {
     this.renderer.setSize(width, height);
     document.body.appendChild(this.renderer.domElement);
     this.camera = new THREE.PerspectiveCamera(24, width / height, 0.1, 5000);
-    this.camera.position.set(150, 200, 120);
+    this.camera.position.set(230, 230, 150);
     this.camera.lookAt(new THREE.Vector3(0, 0, 0));
     this.camera.up.set(0, 0, 1);
     this.scene.add(this.camera);
@@ -82,12 +82,13 @@ Engine = (function() {
   Engine.prototype.initControls = function() {
     this.controls = new THREE.TrackballControls(this.camera, this.renderer.domElement);
     this.controls.rotateSpeed = 1.0;
-    this.controls.zoomSpeed = 1.2;
+    this.controls.zoomSpeed = 0.1;
     this.controls.panSpeed = 0.2;
     this.controls.noZoom = false;
     this.controls.noPan = false;
     this.controls.staticMoving = false;
-    return this.controls.dynamicDampingFactor = 0.3;
+    this.controls.dynamicDampingFactor = 0.3;
+    return this.controls.target.set(0, 0, 40);
   };
 
   Engine.prototype.addBody = function(body) {
@@ -404,7 +405,6 @@ init = function() {
   groundView = new THREE.Mesh(groundGeo, new THREE.MeshLambertMaterial({
     wireframe: true
   }));
-  groundView.rotation.x = -3 * Math.PI / 2.0;
   engine.groundBody = engine.addBody(new Body(groundBody, groundView));
   engine.groundBody.updateVertexMap();
   engine.ground = engine.groundBody.view.mesh;

@@ -44,7 +44,7 @@ class Engine
     @renderer.setSize width, height
     document.body.appendChild @renderer.domElement
     @camera  = new THREE.PerspectiveCamera( 24, width / height, 0.1, 5000 )
-    @camera.position.set(150,200,120)
+    @camera.position.set(230,230,150)
     @camera.lookAt( new THREE.Vector3(0,0,0) )
     @camera.up.set(0,0,1)
     @scene.add(@camera)
@@ -62,13 +62,13 @@ class Engine
   initControls : () ->
     @controls = new THREE.TrackballControls(@camera, @renderer.domElement);
     @controls.rotateSpeed = 1.0;
-    @controls.zoomSpeed = 1.2;
+    @controls.zoomSpeed = 0.1;
     @controls.panSpeed = 0.2;
     @controls.noZoom = false;
     @controls.noPan = false;
     @controls.staticMoving = false;
     @controls.dynamicDampingFactor = 0.3;
-    
+    @controls.target.set(0, 0, 40)
   addBody : (body) ->
     @bodies.push body
     @world.add body.phys 
@@ -238,12 +238,11 @@ init = () ->
   segSize = 50
   groundGeo = new THREE.PlaneGeometry segSize*10,segSize*10, segSize, segSize
   groundView = new THREE.Mesh groundGeo, new THREE.MeshLambertMaterial({wireframe:true}) 
-  groundView.rotation.x = -3*Math.PI/2.0
+  # groundView.rotation.x = -3*Math.PI/2.0
   engine.groundBody = engine.addBody new Body(groundBody, groundView)
   engine.groundBody.updateVertexMap()
   engine.ground = engine.groundBody.view.mesh
   _(30).times (i) ->    
-    # if(Math.floor(i/16)%2==0)
     if(i%6<3)
       if((i+1)%2!=0)
         block = new Block('long')
