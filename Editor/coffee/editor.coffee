@@ -228,7 +228,7 @@ init = () ->
   segSize = 50
   groundGeo = new THREE.PlaneGeometry segSize*10,segSize*10, segSize, segSize
   groundView = new THREE.Mesh groundGeo, new THREE.MeshLambertMaterial({wireframe:true}) 
-  groundView.rotation.x = -3*Math.PI/2.0
+  # groundView.rotation.x = -3*Math.PI/2.0
   engine.groundBody = engine.addBody new Body(groundBody, groundView)
   engine.groundBody.updateVertexMap()
   engine.ground = engine.groundBody.view.mesh
