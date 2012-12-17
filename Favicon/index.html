@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <title id="title">Hey look over here!</title>
+    <link href="//fonts.googleapis.com/css?family=Open+Sans:400,300,600|Merriweather:400" rel="stylesheet" type="text/css">
+    <style>
+      body { font-family : 'Open Sans' }
+      div { margin: 0 auto 0 auto; padding:5em; width:50%; }
+      a { color: #000; text-decoration:none;}
+    </style>
+    
+    <script src="js/favicon_utils.js"></script>
+    <script src="../lib/js/fabric.js"></script>
+    
+  </head>
+  <body>
+    <script>
+      var fav = FaviconUtils.makeFavicon();
+           
+      var canvas = new fabric.Element('canvas');
+
+      var rect = new fabric.Rect({
+        top: 100,
+        left: 100,
+        width: 60,
+        height: 70,
+        fill: 'red'
+      });
+
+      canvas.add(rect);
+      
+      FaviconUtils.changeFavicon( fav, canvas.toDataURL() );
+      
+    </script>
+  </body>
+</html>
+      
