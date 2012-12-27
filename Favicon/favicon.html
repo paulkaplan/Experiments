@@ -2,9 +2,9 @@
 <head>
   <link id="favicon" rel="shortcut icon" src="">
   <title id="title">Hey look over here!</title>
-  <link href="//fonts.googleapis.com/css?family=Open+Sans:400,300,600|Merriweather:400" rel="stylesheet" type="text/css">
+<!--   <link href="//fonts.googleapis.com/css?family=Open+Sans:400,300,600|Merriweather:400" rel="stylesheet" type="text/css"> -->
   <style>
-    body { font-family : 'Open Sans' }
+    /*body { font-family : 'Open Sans' }*/
     div { margin: 0 auto 0 auto; padding:5em; width:50%; }
     a { color: #000; text-decoration:none;}
   </style>
@@ -34,7 +34,7 @@
   	Video = document.createElement('video');
     Video.autoplay = true;
     // console.log(stream)
-    setTimeout( function(){
+    // setTimeout( function(){
       Video.src = window.URL.createObjectURL(stream)
       Video.onloadedmetadata = function(e) {
       	var success = document.createElement('div');
@@ -42,7 +42,7 @@
         document.body.appendChild(success)
         animate();
       }
-    }, 500  )
+    // }, 5000  )
 
   }
   function cameraDenied(error)
