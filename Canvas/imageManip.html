@@ -1,0 +1,237 @@
+<html>
+	<body>
+		<div id="container"><br /><br /><br /><br /><br />Generating...</div>
+		<div id="info"><a href="http://threejs.org" target="_blank">three.js</a> - terrain demo. <a href="canvas_geometry_terrain.html">generate another</a></div>
+		<script>
+				var canvas = document.createElement('canvas');
+			canvas.width = 500;
+			canvas.height = 500;
+		// document.body.appendChild( canvas );
+
+		var ctx = canvas.getContext('2d');
+
+		var img = new Image();   // Create new img element
+
+		img.src = '57_ellis.jpg';
+		</script>
+		<script src="../lib/js/three.js"></script>
+
+		<script src="../lib/js/stats.js"></script>
+
+		<script>
+
+			var container, stats;
+
+			var camera, scene, renderer;
+
+			var mesh;
+
+			var mouseX = 0, mouseY = 0;
+
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
+
+			init();
+			animate();
+
+			function init() {
+
+				container = document.getElementById( 'container' );
+
+				camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.z = 500;
+
+				scene = new THREE.Scene();
+
+				var data = generateHeight( 1024, 1024 );
+				var texture = new THREE.Texture( generateTexture( data, 1024, 1024 ) );
+				texture.needsUpdate = true;
+
+				var material = new THREE.MeshBasicMaterial( { map: texture, overdraw: true } );
+
+				var quality = 16, step = 1024 / quality;
+
+				var plane = new THREE.PlaneGeometry( 2000, 2000, quality - 1, quality - 1 );
+				plane.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
+
+				for ( var i = 0, l = plane.vertices.length; i < l; i ++ ) {
+
+					var x = i % quality, y = ~~ ( i / quality );
+					plane.vertices[ i ].y = data[ i ]*1000;
+
+				}
+
+				plane.computeCentroids();
+
+				mesh = new THREE.Mesh( plane, material );
+				scene.add( mesh );
+
+				renderer = new THREE.WebGLRenderer();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				container.innerHTML = "";
+
+				container.appendChild( renderer.domElement );
+
+				stats = new Stats();
+				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.top = '0px';
+				container.appendChild( stats.domElement );
+
+				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+
+			function onWindowResize() {
+
+				windowHalfX = window.innerWidth / 2;
+				windowHalfY = window.innerHeight / 2;
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			function generateHeight( width, height ) {
+
+				var hdata = Float32Array ? new Float32Array( width * height ) : [], 
+				size = width * height, quality = 2, z = Math.random() * 100;
+
+				ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+				var im = ctx.getImageData(0, 0, canvas.width, canvas.height);
+				// console.log(data);
+				var data = im.data;
+				// var hist = histogramColors(data);
+
+				threshFilter( data, 0.465 );
+				var n = 0;
+				for( var i=0; i<data.length; i+=4){
+					var h = data[i];
+					hdata[n] = h*10;
+					// if( h > 0.5 ){
+					// 	hdata[n] = 100;
+					// } else {
+					// 	hdata[n] = 0;
+					// }
+					n++;
+
+				}
+
+				return hdata;
+			}
+
+			function generateTexture( data, width, height ) {
+
+				var canvas, context, image, imageData,
+				level, diff, vector3, sun, shade;
+
+				vector3 = new THREE.Vector3( 0, 0, 0 );
+
+				sun = new THREE.Vector3( 1, 1, 1 );
+				sun.normalize();
+
+				canvas = document.createElement( 'canvas' );
+				canvas.width = width;
+				canvas.height = height;
+
+				context = canvas.getContext( '2d' );
+				context.fillStyle = '#000';
+				context.fillRect( 0, 0, width, height );
+
+				image = context.getImageData( 0, 0, width, height );
+				imageData = image.data;
+
+				for ( var i = 0, j = 0, l = imageData.length; i < l; i += 4, j ++  ) {
+
+					vector3.x = data[ j - 1 ] - data[ j + 1 ];
+					vector3.y = 2;
+					vector3.z = data[ j - width ] - data[ j + width ];
+					vector3.normalize();
+
+					shade = vector3.dot( sun );
+
+					imageData[ i ] = ( 96 + shade * 128 ) * ( data[ j ] * 0.007 );
+					imageData[ i + 1 ] = ( 32 + shade * 96 ) * ( data[ j ] * 0.007 );
+					imageData[ i + 2 ] = ( shade * 96 ) * ( data[ j ] * 0.007 );
+
+				}
+
+				context.putImageData( image, 0, 0 );
+
+				return canvas;
+
+			}
+
+			function onDocumentMouseMove(event) {
+
+				mouseX = event.clientX - windowHalfX;
+				mouseY = event.clientY - windowHalfY;
+
+			}
+
+			//
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				render();
+				stats.update();
+
+			}
+
+			function render() {
+
+				camera.position.x += ( mouseX - camera.position.x ) * 0.05;
+				camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
+				camera.lookAt( scene.position );
+
+				renderer.render( scene, camera );
+
+			}
+	function threshFilter( data, thresh ){
+		for(var i=0; i<data.length; i+=4){
+			var v = RGBtoHSV(data[i], data[i+1],data[i+2])[2];
+			v = (v>thresh)? 0 : 255;
+			data[i]   = v;
+			data[i+1] = v;
+			data[i+2] = v;
+		}
+	}
+	// http://www.javascripter.net/faq/rgb2hsv.htm
+// take rgb [0,255] -> hsv [0,1]
+function RGBtoHSV (r,g,b) {
+	var computedH = 0;
+	var computedS = 0;
+	var computedV = 0;
+	r=r/255; g=g/255; b=b/255;
+	var minRGB = Math.min(r,Math.min(g,b));
+	var maxRGB = Math.max(r,Math.max(g,b));
+
+	// Black-gray-white
+	if (minRGB==maxRGB) {
+		computedV = minRGB;
+		return [0,0,computedV];
+	}
+
+	// Colors other than black-gray-white:
+	var d = (r==minRGB) ? g-b : ((b==minRGB) ? r-g : b-r);
+	var h = (r==minRGB) ? 3 : ((b==minRGB) ? 1 : 5);
+	computedH = 60*(h - d/(maxRGB - minRGB));
+	computedS = (maxRGB - minRGB)/maxRGB;
+	computedV = maxRGB;
+	return [computedH / 360,computedS,computedV];
+
+}
+
+
+		</script>
+	</body>
+</html>
