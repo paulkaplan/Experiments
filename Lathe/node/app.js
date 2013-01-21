@@ -54,7 +54,7 @@ app.post('/verts', function(req, res){
       iv.z += 0.1*no.z*disps[r][1];
     }
     if(disps[r][1]<narrowest){
-      console.log("Setting bottom: "+r);
+      // console.log("Setting bottom: "+r);
       narrowest = disps[r][1];
       lowestInner =  r;
     }
@@ -98,9 +98,10 @@ app.post('/verts', function(req, res){
     tris.push([innerVerts[index+1], innerVerts[index], verts[index+1]]);
   }
 
-    // tris.push([verts[index], verts[verts.length-1], verts[index+1]]);
   var now = new Date();
   var stream = fs.createWriteStream( "stl/"+now.getHours()+"_"+now.getMinutes()+"_"+now.getSeconds()+"_"+now.getMilliseconds()+".stl");
+  
+  // ASCII STL write
   stream.once('open', function(fd) {
     stream.write("solid cyl");
     for(var i = 0; i<tris.length; i++){
@@ -115,12 +116,76 @@ app.post('/verts', function(req, res){
     stream.write("endsolid");
     stream.end();
   });
+  
+  //
+  // Binary STL write
+  // Format - from http://en.wikipedia.org/wiki/STL_(file_format)#Binary_STL
+  /*  UINT8[80] – Header
+      UINT32 – Number of triangles
+
+      foreach triangle (4*3*4 byte size / triangle)
+        REAL32[3] – Normal vector
+        REAL32[3] – Vertex 1
+        REAL32[3] – Vertex 2
+        REAL32[3] – Vertex 3
+        UINT16 – Attribute byte count
+      end
+
+  */
+  //
+  
+  // // 1. compute the size
+  //   var size  = tris.length*(4*3*4+2);
+  //       size += 10; // Header
+  //       size += 4;  // Number of triangles
+  //   var b = new Buffer(size);
+  //   var cursor = 0;
+  
+  // // 2. write header
+  //   b.fill(0, 0, 10);
+  //   cursor += 10;
+  
+  // // 3. write num tris
+  //   b.writeUInt32LE(tris.length, cursor);
+  //   cursor += 4;
+  
+  // // 4. write triangles
+  //   for(var i = 0; i<tris.length; i++){
+  //     cursor = writeZeroVectorToBuffer(b, cursor);
+  //     cursor = writeVectorToBuffer(tris[i][0], b, cursor);
+  //     cursor = writeVectorToBuffer(tris[i][1], b, cursor);
+  //     cursor = writeVectorToBuffer(tris[i][2], b, cursor);
+  //     b.writeUInt16LE(0, cursor);                 cursor+=2;
+  //   }
+
+  // // 5. write the buffer to file
+  //   fs.writeFileSync(createFileName(), b);
+
+
+
+
 });
 
 http.createServer(app).listen(app.get('port'), function(){
   console.log("Express server listening on port " + app.get('port'));
 });
 
+// function computeSize
+function createFileName(){
+  now = new Date();
+  return "stl/"+now.getHours()+"_"+now.getMinutes()+"_"+now.getSeconds()+"_"+now.getMilliseconds()+".stl"
+}
+function writeVectorToBuffer(v, b, offset){
+  b.writeFloatLE(v.x, offset);
+  b.writeFloatLE(v.y, offset+4);
+  b.writeFloatLE(v.z, offset+8);
+  return offset +4*4;
+}
+function writeZeroVectorToBuffer(b, offset){
+  var v = {x:0, y:0, z:0};
+  writeVectorToBuffer(v, b, offset);
+  return offset + 4*4;
+}
 
 function normalize(v){
   // var n = {
