@@ -1,0 +1,27 @@
+html {
+	font-size: 12pt;
+	background:#bbb;
+	color:#eee;
+}
+#sidebar{
+	position:absolute;
+}
+
+.tool {
+	width: 5em;
+	padding:2em;
+}
+
+.selected{
+	border:2px solid #FFFF00;
+	border-radius: 5px;
+	background:#ddd;
+}
+
+canvas { 
+	padding-left:3em;
+}
+
+.reversed {
+	-webkit-transform:rotate(180deg);
+}

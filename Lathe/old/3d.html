@@ -1,0 +1,221 @@
+<head>
+  <script src="./javascripts/subsegments.js"></script>
+  <script src="./javascripts/beadedString.js"></script>
+  <script src="./javascripts/js/three.js"></script>
+
+  <link rel="stylesheet" href="lathe.css" type="text/css" media="all">
+</head>
+<body>
+<!--   <div id="sidebar">
+    <div id="tools">
+      <div class="tool" id="ramp">
+        Ramp
+      </div>
+      <div class="tool" id="inverse_ramp">
+        Inverse Ramp
+      </div>
+
+    </div>
+    <div id="edit">
+      <div class="slider">
+        <label>Width</label><br/>
+        <input id="width" type="range" />
+      </div>
+      <div class="slider">
+        <label>Depth</label><br/>
+        <input id="depth" type="range" />
+      </div>
+    </div>
+  </div> -->
+  <script id="simplefs" type="x-shader/x-fragment">
+    varying vec3 vNormal;
+
+    // varying float disp;
+
+    void main(void) {
+      vec3 light1 = vec3(0.5,0.2,1.0);
+      vec3 light2 = vec3(-0.5,-0.5,-1.0);
+      // ensure it's normalized
+      light1 = normalize(light1);
+      light2 = normalize(light2);
+      // calculate the dot product of
+      // the light to the vertex normal
+      float dProd = max(0.0, dot(vNormal, light1));
+            dProd += max(0.0, dot(vNormal, light2));
+      // feed into our frag colour
+      vec4 color = vec4( dProd*vec3(0.5, 0.0, 0.8), 1.0);
+      gl_FragColor = color;
+        // gl_FragColor = vec4(0.5, 0.5, 0.0, 1.0);
+    }
+</script>
+
+<script id="simplevs" type="x-shader/x-vertex">
+    uniform float scale;
+    varying vec3 vNormal;
+    attribute float displacement;
+
+    void main(void) {
+      vNormal = normal;
+      vec3 pos = position + scale*normal*displacement;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+    }
+</script>
+  <script>
+  var vertShader = document.getElementById("simplevs").innerHTML;
+  var fragShader = document.getElementById("simplefs").innerHTML;
+  var attributes = {
+        displacement: {
+          type: 'f', // a float
+          value: [] // an empty array
+         }
+  };
+  var uniforms = {
+    scale : { type: 'f', value: 0.1 }
+  }
+  var myMaterial = new THREE.ShaderMaterial({
+      vertexShader : vertShader,
+      fragmentShader: fragShader,
+      attributes : attributes,
+      uniforms : uniforms,
+      wireframe : true
+  });
+    // var canvas = document.createElement('canvas');
+    //     canvas.width = 1500;
+    //     canvas.height= 900;
+    //     document.body.appendChild(canvas);
+    // var ctx = new EasyDrawing( canvas );
+    
+    // // var line = new LineSegment([100,500], [1200, 500]);
+
+    // var string = new BeadedString(1000, 1000);
+    // string.initBeads( [100, 300] );
+
+    // ctx.drawPoints( string.beads );
+
+    // document.addEventListener('mousemove', function(e){
+    //   string.applyTool( [e.clientX, e.clientY]  );
+    //   ctx.clear();
+    //   ctx.drawPoints( string.beads );
+    // });
+
+
+        // window.onload = function() {
+
+    var renderer = new THREE.WebGLRenderer();
+    renderer.setSize( 800, 600 );
+    document.body.appendChild( renderer.domElement );
+
+    var scene = new THREE.Scene();
+
+    var camera = new THREE.PerspectiveCamera(
+                                    35,             // Field of view
+                                    800 / 600,      // Aspect ratio
+                                    0.1,            // Near plane
+                                    10000           // Far plane
+                                );
+    camera.position.set( -15, 10, 10 );
+    camera.lookAt( scene.position );
+
+    scene.add( camera );
+    var numberHeight = 48;
+    var numberRadial = 48;
+    var cyl  = new THREE.Mesh(
+                            new THREE.CylinderGeometry(2, 2, 10, numberRadial, numberHeight),
+                            myMaterial
+                            );
+
+    for(var n=0; n<cyl.geometry.vertices.length; n++){
+      attributes.displacement.value.push(0);
+    }
+
+    cyl.dynamic = true;
+    cyl.geometry.computeFaceNormals();
+    cyl.geometry.computeVertexNormals();
+
+    scene.add( cyl );
+    var string = new BeadedString(500, numberHeight);
+    string.initBeads( [0, 0] );
+
+    var light = new THREE.PointLight( 0xFFFF00 );
+    light.position.set( -1,0, 5 );
+    scene.add( light );
+    string.tool = 'square';
+    
+
+    function animate(){
+      requestAnimationFrame( animate );
+      modify();
+      render();
+    } 
+    function setRing(attr, ring, val){
+      for(var n=ring*numberRadial; n<ring*numberRadial+numberRadial; n++ ){
+        attr[n] = val;
+      }
+    }
+    function modify(){
+      cyl.rotation.y+=0.1;
+    }
+
+    document.addEventListener('mousedown', function(e){
+            exportVerts();
+
+      string.applyTool( [e.clientY, e.clientX]  );
+      for(var n=0; n<numberHeight; n++){
+        setRing(attributes.displacement.value, n, string.beads[n][1] );
+      }
+      attributes.displacement.needsUpdate = true;
+      // console.log('requested');
+
+      // exportVerts();
+
+    });
+    function render () {
+      renderer.render( scene, camera );
+    }
+
+    window.onload = function(){ animate(); }
+        // };
+    function exportVerts(){
+      var r = new XMLHttpRequest();
+      r.open("GET", "http://localhost:8000", true);
+
+      r.onreadystatechange = function () {
+        if (r.readyState != 4 || r.status != 200) return;
+        alert("Success: " + r.responseText);
+      }
+
+      r.send( JSON.stringify( cyl.geometry.vertices ) );
+    }
+  </script>
+
+  <script>
+    document.getElementById('ramp').addEventListener('click', function(e){
+      string.tool = 'ramp';
+    });
+    document.getElementById('inverse_ramp').addEventListener('click', function(e){
+      string.tool = 'inverse_ramp';
+    });
+    document.getElementById('width').addEventListener('change', function(e){
+      var val = e.srcElement.valueAsNumber;
+      string.setWidth( Math.floor(val/20) );
+    });
+    document.getElementById('depth').addEventListener('change', function(e){
+      var val = e.srcElement.valueAsNumber;
+      string.setDepth( (val/100.0) / 1.0 );
+    });
+
+  </script>
+  <script>
+    // var Exporter = function(vertices){
+    //   this.vertices = vertices;
+    //   this.nVerts = vertices.length;
+    // }
+
+    // Exporter.prototype.triangles = function(){
+    //   for(var n=0; n<this.nVerts; n++){
+
+    //   }
+    // }
+
+  </script>
+</body>

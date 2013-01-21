@@ -1,0 +1,28 @@
+<head>
+  <script src="subsegments.js"></script>
+  <script src="beadedString.js"></script>
+
+</head>
+<body>
+  <script>
+    var canvas = document.createElement('canvas');
+        canvas.width = 1500;
+        canvas.height= 900;
+        document.body.appendChild(canvas);
+    var ctx = new EasyDrawing( canvas );
+    
+    // var line = new LineSegment([100,500], [1200, 500]);
+
+    var string = new BeadedString(1000, 1000);
+    string.initBeads( [100, 300] );
+
+    ctx.drawPoints( string.beads );
+
+    document.addEventListener('mousemove', function(e){
+      string.applyTool( [e.clientX, e.clientY]  );
+      ctx.clear();
+      ctx.drawPoints( string.beads );
+    });
+
+  </script>
+</body>

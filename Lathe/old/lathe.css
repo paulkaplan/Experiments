@@ -1,0 +1,19 @@
+html {
+	font-size: 12pt;
+}
+#sidebar{
+	position:absolute;
+}
+.slider {
+	width : 10em;
+		border: 1px solid #eee;
+	margin: 1em;
+	padding: 1em;
+}
+.tool {
+	/*font-size: 0.8em;*/
+	border: 1px solid #eee;
+	margin: 1em;
+	padding: 1em;
+	width: 5em;
+}
