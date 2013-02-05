@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <script src="fabric.js"></script>
+  <script src="http://code.jquery.com/jquery-1.9.0.min.js"></script>
+  <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,300,600' rel='stylesheet' type='text/css'>
+  <link type="text/css" rel="stylesheet" href="css/style.css" />
+
+  <style>
+    html { font-family:'Open Sans'; font-weight: 400; font-size: 14px;}
+    #operations { 
+      position: absolute;  
+      width:124px; 
+      margin-left:1em;     
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="c" width=800 height=800></canvas>
+  <div id="operations">
+      <a href="#" class="button">
+          <span class="txt">Operations</span>
+          <span class="ar">&#9660;</span>
+      </a>
+      <div class="menu">
+          <ul>
+              <li><a href="#">Profile</a></li>
+              <li><a href="#">Pocket</a></li>
+              <li><a href="#">Nesting</a></li>
+              <li><a href="#">Remove</a></li>
+          </ul>
+      </div>
+  </div>
+</body>
+
+  <script>
+  var canvas = new fabric.Canvas('c');
+      canvas.setBackgroundImage("grid_blue.jpg", function(){
+        canvas.renderAll();
+      });
+      canvas.backgroundImageStretch = false;
+  var rect = new fabric.Rect({
+    left: 400,
+    top: 250,
+    width: 400,
+    height: 350,
+    fill: "rgba(255, 255, 255, 0.2)",
+    stroke:"black",
+    // angle: 20,
+    // padding: 20
+  });
+
+  var circle = new fabric.Circle({
+    radius:60,
+    fill:"rgba(255, 255, 255, 0.4)",
+    stroke:"black",
+    left:400,
+    top:200
+  });
+
+  canvas.on('object:selected', function(e){
+    updateMenu( e.target );
+    if( !$("#operations").is(":visible") ){ $("#operations").show(); }
+  });
+  canvas.on('object:moving', function(e){
+    updateMenu( e.target );
+  })
+
+  canvas.on('selection:cleared', function(e){
+    removeMenu();
+  })
+  function addPressPullButton(){
+    updateMenu( circle );
+    $("#operations").show();
+  }
+  function removeMenu(){
+    $("#operations").hide();
+  }
+  function updateMenu( obj ){
+    var offset = $("#c").offset();
+        offset.top  += obj.top-obj.height/2;
+        offset.left += obj.left+obj.width/2;
+    var depthMarker = $("#operations");
+    depthMarker.css('top', offset.top );
+    depthMarker.css('left', offset.left );
+  }
+  // var group = new fabric.Group([rect, circle], {
+  //   left:200,
+  //   top:200
+  // })
+  canvas.add(rect);
+  canvas.add(circle);
+
+  $(document).ready( function(){
+    $("#operations").hide();
+    $(".button").show();
+      var button = $('.button');
+      var menu = $('.menu');
+      
+      $('ul li a', menu).each(function() {
+          $(this).append('<span />');
+      });
+      // button.show();
+      var down = false;
+      button.click(function(e){
+        if( !down ){
+          down = true;
+          menu.css({display: 'block'});
+          $('.ar', this).html('&#9650;').css({top: '3px'});
+          $(this).addClass('active');
+        } else {
+          menu.css({display: 'none'});
+          $('.ar', this).html('&#9660;').css({top: '5px'});
+          $(this).removeClass('active');
+          down = false;
+        }
+      });
+          
+  })
+
+</script>
