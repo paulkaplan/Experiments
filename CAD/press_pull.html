@@ -18,7 +18,7 @@
 </head>
 <body>
 
-  <canvas id="c" width=800 height=800></canvas>
+  <canvas id="c" width=1200 height=901></canvas>
   <div id="operations">
       <a href="#" class="button">
           <span class="txt">Operations</span>
@@ -26,7 +26,7 @@
       </a>
       <div class="menu">
           <ul>
-              <li><a href="#">Profile</a></li>
+              <li><a id="profile" href="#">Profile</a></li>
               <li><a href="#">Pocket</a></li>
               <li><a href="#">Nesting</a></li>
               <li><a href="#">Remove</a></li>
@@ -40,7 +40,7 @@
       canvas.setBackgroundImage("grid_blue.jpg", function(){
         canvas.renderAll();
       });
-      canvas.backgroundImageStretch = false;
+      canvas.backgroundImageStretch = false
   var rect = new fabric.Rect({
     left: 400,
     top: 250,
@@ -59,8 +59,9 @@
     left:400,
     top:200
   });
-
+  var selected = null;
   canvas.on('object:selected', function(e){
+    selected = e.target;
     updateMenu( e.target );
     if( !$("#operations").is(":visible") ){ $("#operations").show(); }
   });
@@ -69,6 +70,7 @@
   })
 
   canvas.on('selection:cleared', function(e){
+    selected = null;
     removeMenu();
   })
   function addPressPullButton(){
@@ -93,6 +95,13 @@
   canvas.add(rect);
   canvas.add(circle);
 
+  function groupObjects(objs){
+    var group = new fabric.Group(objs, {});
+    canvas.add(group);
+    for(var n=0; n<objs.length; n++){
+      canvas.remove(objs[n]);
+    }
+  }
   $(document).ready( function(){
     $("#operations").hide();
     $(".button").show();
@@ -117,7 +126,15 @@
           down = false;
         }
       });
-          
+
+    $("#profile").click( function(){
+      console.log('click');
+      console.log(selected)
+      selected.setFill( "rgba(255, 0, 0, 0.5)" );
+      canvas.renderAll();
+    })  
   })
+
+
 
 </script>

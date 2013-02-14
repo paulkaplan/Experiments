@@ -1,19 +1,24 @@
+<!DOCTYPE html>
 <html>
 <head>
   <link id="favicon" rel="shortcut icon" src="">
   <title id="title">Hey look over here!</title>
-<!--   <link href="//fonts.googleapis.com/css?family=Open+Sans:400,300,600|Merriweather:400" rel="stylesheet" type="text/css"> -->
+  <link href="//fonts.googleapis.com/css?family=Open+Sans:400,300,600|Merriweather:400" rel="stylesheet" type="text/css">
   <style>
-    /*body { font-family : 'Open Sans' }*/
+    body { font-family : 'Open Sans' }
     div { margin: 0 auto 0 auto; padding:5em; width:50%; }
-    a { color: #000; text-decoration:none;}
+    a { color: #; text-decoration:none;}
   </style>
 </head>
-<body>
+
+<body>  
+</body>
+
+  
   <script>
-  window.onload = function(){ startCamera(); }
-  var canvas, s;
+  var canvas, s, video;
   var favicon = document.getElementById("favicon");
+
   function startCamera()
   {
     navigator.getMedia = ( navigator.getUserMedia ||
@@ -21,40 +26,35 @@
                            navigator.mozGetUserMedia ||
                            navigator.msGetUserMedia);
     
-  	navigator.getMedia({ video: true, audio: false }, cameraGranted, cameraDenied);
+    navigator.getMedia({ video: true, audio: false }, cameraGranted, cameraDenied);
   }
 
   function cameraGranted(stream) {
-  	//video.src = (window.webkitURL) ? window.webkitURL.createObjectURL(stream) : stream;
-  	container = document.getElementById('container');
+    container = document.getElementById('container');
      canvas = document.createElement('canvas')
         canvas.width = 32;
         canvas.height = 32;
     ctx = canvas.getContext('2d');
-  	Video = document.createElement('video');
-    Video.autoplay = true;
-    // console.log(stream)
-    // setTimeout( function(){
-      Video.src = window.URL.createObjectURL(stream)
-      Video.onloadedmetadata = function(e) {
-      	var success = document.createElement('div');
-            success.innerHTML = "<h1>Far be it from me to ever let my common sense get in the way of my stupidity.</h1><h2>I say we press on.</h2><p>Yet another exercise in triviality, by <a href='http://paulkaplan.me'>Paul Kaplan</a></p>";
-        document.body.appendChild(success)
-        animate();
-      }
-    // }, 5000  )
+    
+    video = document.createElement('video');
+    video.autoplay = true;
+    video.src = window.URL.createObjectURL(stream)
+    var success = document.createElement('div');
+        success.innerHTML = "<h1>Far be it from me to ever let my common sense get in the way of my stupidity.</h1><h2>I say we press on.</h2><p>Yet another exercise in triviality, by <a href='http://paulkaplan.me'>Paul Kaplan</a></p>";
+    document.body.appendChild(success);
 
+    animate();
   }
   function cameraDenied(error)
   {
     var err = document.createElement('div');
-        err.innerHTML = "<h1>This is why we can't have nice things.</h1><p> Camera isn't working. Go to <a href='chrome://flags'>chrome://flags</a> and enable getUserMedia. Or Firefox equivalent.</p>";
+        err.innerHTML = "<h1>This is why we can't have nice things.</h1><p> Camera isn't working. Go to <a href='chrome://flags'>chrome://flags</a> and enable getUserMedia. If not on Chrome, use Chrome.";
     document.body.appendChild(err)
   }
   
   function changeFavicon(){
-    if (Video.readyState === Video.HAVE_ENOUGH_DATA){
-      ctx.drawImage(Video,0,0,canvas.width,canvas.height);
+    if (video.readyState === video.HAVE_ENOUGH_DATA){
+      ctx.drawImage(video,0,0,canvas.width,canvas.height);
       favicon.href = canvas.toDataURL();
     }
   }
@@ -64,7 +64,7 @@
     changeFavicon();
   }
   
-  // Paul Irish - http://paulirish.com/2011/requestanimationframe-for-smart-animating/
+  // http://paulirish.com/2011/requestanimationframe-for-smart-animating/
   window.requestAnimFrame = (function(){
     return  window.requestAnimationFrame       || 
             window.webkitRequestAnimationFrame || 
@@ -76,7 +76,8 @@
             };
   })();
 
+  window.onload = function(){ startCamera(); }
 
   </script>
-  
-</body>
+
+</html>
