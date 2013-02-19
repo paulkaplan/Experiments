@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" /> 
+    <link href="//fonts.googleapis.com/css?family=Open+Sans:400,300,600|Merriweather:300,400" rel="stylesheet" type="text/css">
+
+  </head>
+  <body>
+    <style>
+      html, body { font-family: 'Open Sans'; margin:0; padding:0;}
+      a { color: inherit; text-decoration: none; }
+      canvas { 
+        padding-top:20px;
+        padding-left:1px;
+        /*background-image: url(target.png);*/
+/*        background-position: 50% 50%;
+        background-repeat: no-repeat;*/
+      }
+      #splash { 
+        width: 80%;
+        height: 80%;
+        background-color: #fff;
+        border: 1px solid #222;
+        position:absolute;
+        top:10%; left:10%;
+      }
+      h2 { margin-left:0.5em;}
+      #splash img { margin: 0 20% 5% 30%}
+      #go-container, #restart-container { 
+        background-color: rgba(0, 250, 0, 0.2);
+        padding:0.15em 0.25em;
+        width:30%;
+        margin-left:32.5%;
+        text-align: center;
+       }
+       #countdown { text-align: center; font-size: 4em; margin-top:30%;}
+       .hidden { display: none; }
+       p.time { font-size: 0.35em; margin-top:0; }
+    </style>
+    <div id="splash">
+      <h2>Navigate the maze</h2>
+      <img src="TiltIcon.png" />
+      <div id="go-container">
+        <a href="#" id="go">
+          <h3>Play!</h3>
+        </a>
+      </div>
+    </div>
+    <canvas id="c" width=320 height=320></canvas>
+    <script type="text/javascript">
+      var tiltLR, tiltFB
+      var startTime;
+
+      function init() {
+        startTime = new Date();
+        currentVelocity = {x:0, y:0}
+        currentPosition = {x:canvas.width/2, y:30};
+        if ((window.DeviceMotionEvent) || ('listenForDeviceMovement' in window)) {
+          window.addEventListener('devicemotion', deviceMotionHandler, false);
+
+          animate(); 
+        } else {
+          // document.getElementById("dmEvent").innerHTML = "Not supported on your device or browser.  Sorry."
+        }
+      }
+      function restart(){
+        startTime = new Date();
+        currentVelocity = {x:0, y:0}
+        currentPosition = {x:canvas.width/2, y:30};
+        finished = false;
+        in_contact = false;
+        animate();
+
+      }
+
+      function deviceMotionHandler(eventData) {
+        // Grab the acceleration including gravity from the results
+        var acceleration = eventData.accelerationIncludingGravity;
+        
+        // Display the raw acceleration data
+        var rawAcceleration = "[" + Math.round(acceleration.x) + ", " + Math.round(acceleration.y) + ", " + Math.round(acceleration.z) + "]";
+        
+        
+        // Z is the acceleration in the Z axis, and tells us if the device is facing up, or down
+        var facingUp = -1;
+        if (acceleration.z > 0) {
+          facingUp = +1;
+        }
+  
+        tiltLR = Math.round(((acceleration.x) / 9.81) * -90);
+        tiltFB = Math.round(((acceleration.y + 9.81) / 9.81) * 90 * facingUp) + 60;
+        // console.log(tiltLR, tiltFB);
+          currentVelocity.x += -0.01*tiltLR;
+          currentVelocity.y +=  0.01*tiltFB;
+      }
+
+      var canvas = document.getElementById('c');
+      var ctx    = canvas.getContext('2d');
+          ctx.fillStyle   = "#ff0000";
+          ctx.strokeStyle = "#ff0000";
+          ctx.lineWidth   = 3;
+      var currentPosition, currentVelocity;
+      var in_contact = false;
+      function draw(){
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(im, 0, 0);
+        ctx.beginPath();
+        var cross_length = 10;
+        ctx.moveTo(currentPosition.x-cross_length/2, currentPosition.y);
+        ctx.lineTo(currentPosition.x+cross_length/2, currentPosition.y);
+        ctx.moveTo(currentPosition.x, currentPosition.y-cross_length/2);
+        ctx.lineTo(currentPosition.x, currentPosition.y+cross_length/2);
+        ctx.stroke();
+
+        in_contact = check_contact();
+      }
+
+      // http://paulirish.com/2011/requestanimationframe-for-smart-animating/
+      window.requestAnimFrame = (function(){
+        return  window.requestAnimationFrame       ||
+                window.webkitRequestAnimationFrame ||
+                window.mozRequestAnimationFrame    ||
+                window.oRequestAnimationFrame      ||
+                window.msRequestAnimationFrame     ||
+                function( callback ){
+                  window.setTimeout(callback, 1000 / 60);
+                };
+      })();
+
+      var MAX_X = 318, MIN_X = 0; 
+      var MAX_Y = 311, MIN_Y = 5;
+      var finished = false;
+      function animate(){
+
+        currentPosition.x += 0.1*currentVelocity.x;
+        currentPosition.y += 0.1*currentVelocity.y;
+
+        if(currentPosition.x < MIN_X) { currentPosition.x = MIN_X; }
+        if(currentPosition.x > MAX_X) { currentPosition.x = MAX_X; }
+        
+        if(currentPosition.y < MIN_Y) { currentPosition.y = MIN_Y; }
+
+        if( in_contact ){
+          endGame( false );
+        } else if(currentPosition.y > MAX_Y) { endGame( true ); }
+        else if(!finished) {
+          requestAnimFrame(animate)
+        }
+
+        draw();
+      }
+      function getPixel(imageData, x, y) {
+        x = Math.floor(x);
+        y = Math.floor(y);
+        var index = ( x + y * imageData.width) * 4;
+        return [ imageData.data[index+0],
+                 imageData.data[index+1],
+                 imageData.data[index+2],
+                 imageData.data[index+3] ];
+      }
+      function indexFromXY(x, y, width){
+        return (x+y*width)*4;
+      }
+      function getPixelBinary(imageData, x, y) {
+        var width = 10;
+        var imageWidth = imageData.width;
+        x = Math.floor(x);
+        y = Math.floor(y);
+        // index = (x + y * imageData.width) * 4;
+        if( 
+             imageData.data[ indexFromXY(x-width/2, y, imageWidth)] !== 255  
+          || imageData.data[ indexFromXY(x+width/2, y, imageWidth)] !== 255  
+          || imageData.data[ indexFromXY(x, y-width/2, imageWidth)] !== 255  
+          || imageData.data[ indexFromXY(x, y+width/2, imageWidth)] !== 255
+
+           ) { return true; }
+        else return false;
+      }
+
+      function check_contact(){
+        return getPixelBinary(im_data, currentPosition.x, currentPosition.y);
+      }
+      var im_canvas = document.getElementById('c');
+      var im_ctx = im_canvas.getContext('2d');
+      var im_data, im;
+
+      function imageLoaded(ev) {
+          element = document.getElementById("c");
+          c = element.getContext("2d");
+
+          im = ev.target; // the image, assumed to be 200x200
+
+          // read the width and height of the canvas
+          width = element.width;
+          height = element.height;
+
+          // stamp the image on the left of the canvas:
+          c.drawImage(im, 0, 0);
+
+          // get all canvas pixel data
+          im_data = c.getImageData(0, 0, width, height);
+
+      }
+
+      im = new Image();
+      im.onload = imageLoaded;
+      im.src = "maze.png"; // code assumes this image is 200x200
+
+      // animate();
+      function countdown(t, el, restarting){
+        if(t>0){
+          el.innerHTML = t;
+          setTimeout( function(){ countdown(t-1, el, restarting); }, 1000);
+        } else {
+          el.innerHTML = 'GO!';
+          setTimeout( function(){
+            var splash = document.getElementById('splash');
+                splash.setAttribute('class', 'hidden');
+            if(!restarting)
+              init();
+            else
+              restart();
+
+          }, 1000)
+        }
+      }
+
+      function startGame(restarting){
+        var splash = document.getElementById('splash');
+        splash.innerHTML = '';
+
+        var countdown_el = document.createElement('div');
+            countdown_el.setAttribute('id', 'countdown');
+
+        splash.appendChild( countdown_el );
+        countdown(3, countdown_el, restarting);
+        // splash.parentNode.removeChild( splash );
+      }
+
+      function endGame( didWin ){
+        finished = true;
+        document.getElementById('splash').setAttribute('class', '');
+        var countdown = document.getElementById('countdown');
+            countdown.innerHTML = '';
+        var endTime = new Date();
+        var elapsedTime = (endTime-startTime)/1000.0;
+        if(didWin){
+          countdown.innerHTML = 'Winner!';
+        } else { 
+          countdown.innerHTML = 'Loser!';
+        }
+        countdown.innerHTML += '<p class="time">'+elapsedTime+'s</p>';
+
+        var restart_el = document.createElement('div');
+            restart_el.setAttribute('id', 'restart-container');
+            restart_el.innerHTML = '<a href="#" id="restart"> \
+                                      <h3>restart</h3> \
+                                    </a>';
+        splash.appendChild( restart_el );
+        restart_el.addEventListener('click', restartGame);
+      }
+
+      function restartGame() {
+        startGame(true);
+      }
+      document.getElementById('go').addEventListener('click', function(){startGame(false) });
+
+    </script>
+
+
+  </body>
