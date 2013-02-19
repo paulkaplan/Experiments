@@ -37,7 +37,7 @@
        .hidden { display: none; }
        p.time { font-size: 0.35em; margin-top:0; }
     </style>
-    <div id="splash">
+    <div id="splash" class="hidden">
       <h2>Navigate the maze</h2>
       <img src="TiltIcon.png" />
       <div id="go-container">
@@ -46,8 +46,20 @@
         </a>
       </div>
     </div>
+    <div id="warning" class="hidden">
+      <h1>This game is designed for use on an iOS device</h1>
+      <p>Because this game requires use of the accelerometer, it is only usable from iOS. Sorry</p>
+    </div>
     <canvas id="c" width=320 height=320></canvas>
     <script type="text/javascript">
+    // Check mobile
+    if( !navigator.userAgent.match(/(iPad|iPhone|iPod)/i) ){
+      document.getElementById('c').setAttribute('class', 'hidden');
+      document.getElementById('warning').setAttribute('class', '');
+    } else {
+      document.getElementById('splash').setAttribute('class', '');
+    }
+
       var tiltLR, tiltFB
       var startTime;
 
