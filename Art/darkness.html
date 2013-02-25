@@ -20,7 +20,7 @@
   var x_size  = 640;
   var y_size  = 480;
 
-  var frequency = Math.random()*100;
+  var frequency = Math.random()*1000;
 
   function output_rule(n){
     var rand = Math.random();
@@ -35,7 +35,7 @@
   var Settings = function(){
     this.base_probability = 0.05;
     this.energy_scaling   = 0.05;
-    this.threshold        = 0.5;
+    this.threshold        = 0.39;
     this.switchFrequency  = 100;
   }
   var settings = new Settings();
@@ -97,6 +97,8 @@
       frame = 0;
       nextSwitch = frequency + Math.random()*50-25;
     } else {
+                  requestAnimFrame(animate);
+
     drawVideo();
     rgb_energy = getEnergy(x_patch, y_patch, x_size, y_size);
     // x_range = [Math.pow(rgb_energy.r, 6), Math.pow(1, 5)].sort();
@@ -119,7 +121,6 @@
         setColor('black');
     }
     }
-            requestAnimFrame(animate, 20);
 
   }
   function solidImage(index){
@@ -226,11 +227,16 @@
   }
   
   // http://paulirish.com/2011/requestanimationframe-for-smart-animating/
-  window.requestAnimFrame = (function(){
-    return  function( callback, time ){
-              window.setTimeout(callback, time);
-            };
-  })();
+window.requestAnimFrame = (function(){
+  return  window.requestAnimationFrame       ||
+          window.webkitRequestAnimationFrame ||
+          window.mozRequestAnimationFrame    ||
+          window.oRequestAnimationFrame      ||
+          window.msRequestAnimationFrame     ||
+          function( callback ){
+            window.setTimeout(callback, 1000 / 60);
+          };
+})();
 
   window.onload = function(){ startCamera(); }
 
