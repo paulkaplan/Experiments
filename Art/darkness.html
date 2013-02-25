@@ -17,8 +17,8 @@
   var canvas, s, video;
 
   var Settings = function(){
-    this.base_probability = 0.02;
-    this.energy_scaling   = 0.02;
+    this.base_probability = 0.0.5;
+    this.energy_scaling   = 0.036;
     this.threshold        = 0.5;
   }
   var settings = new Settings();
@@ -27,7 +27,7 @@
   gui.add(settings, "base_probability", 0.0, 0.1);
   gui.add(settings, "energy_scaling", 0.0, 0.1);
   gui.add(settings, "threshold", 0.0, 0.99);
-  gui.close();
+
 
   function startCamera()
   {
@@ -57,25 +57,14 @@
       ctx.drawImage(video,0,0,canvas.width,canvas.height);
     }
   }
-  var frame = 0;
-  var frequency = 1000+Math.random()*1000;
   function animate(){
     requestAnimFrame(animate);
-    frame++;
-    if(frame>frequency){
-      if(Math.random()>0.75){
-        document.body.setAttribute('class', 'white');
-      }
-      frame = 0;
-    } else {
-
-      drawVideo();
-      var energy = getEnergy();
-      var prob = settings.base_probability
-      prob += energy * settings.energy_scaling;
-      if( Math.random()*prob > settings.threshold ) { document.body.setAttribute('class', 'white'); } else { 
-        document.body.setAttribute('class', 'black');
-      }
+    drawVideo();
+    var energy = getEnergy();
+    var prob = settings.base_probability
+    prob += energy * settings.energy_scaling;
+    if( Math.random()*prob > settings.threshold ) { document.body.setAttribute('class', 'white'); } else { 
+      document.body.setAttribute('class', 'black');
     }
   }
 
