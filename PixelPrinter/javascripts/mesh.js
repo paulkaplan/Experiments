@@ -1,3 +1,30 @@
+function generateSTL(geom){
+  var vertices = geom.vertices;
+  var tris     = geom.faces;
+
+  stl = "solid pixel";
+  for(var i = 0; i<tris.length; i++){
+    stl += ("facet normal "+stringifyVector( tris[i].normal )+" \n");
+    stl += ("outer loop \n");
+    stl += stringifyVertex( vertices[ tris[i].a ] );
+    stl += stringifyVertex( vertices[ tris[i].b ] );
+    stl += stringifyVertex( vertices[ tris[i].c ] );
+    stl += ("endloop \n");
+    stl += ("endfacet \n");
+  }
+  stl += ("endsolid");
+
+  return stl
+}
+
+function stringifyVector(vec){
+  return ""+vec.x+" "+vec.y+" "+vec.z;
+}
+
+function stringifyVertex(vec){
+  return "vertex "+stringifyVector(vec)+" \n";
+}
+
 function removeDuplicateFaces(geometry){
   for(var i=0; i<geometry.faces.length; i++){
     var tri = geometry.faces[i];
@@ -13,7 +40,10 @@ function removeDuplicateFaces(geometry){
       }
     }
   }
-  geometry.faces = geometry.faces.map( function(a){ if(a===undefined){ return false; } else {return a}})
-  geometry.faces = _.compact( geometry.faces );
+  geometry.faces = geometry.faces.filter( function(a){ return a!==undefined });
   return geometry;
+}
+
+function isSame(a1, a2){
+  return !(a1.sort() > a2.sort() || a1.sort() < a2.sort());
 }

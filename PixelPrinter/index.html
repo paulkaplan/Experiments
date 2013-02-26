@@ -33,9 +33,7 @@
 
     <script src="javascripts/three.js"></script>
     <script src="javascripts/mesh.js"></script>
-    <script src="javascripts/underscore.js"></script>
     <script src="javascripts/FileSaver.js"></script>
-
     <div id="modal" class="hidden">
       <h1> Saved! </h1>
     </div>
@@ -303,29 +301,6 @@
         return stl;
       }
 
-      // http://stackoverflow.com/questions/7593590/how-to-detect-array-equality-in-javascript
-      function isSame(a1, a2){
-        return !(a1.sort() > a2.sort() || a1.sort() < a2.sort());
-      }
-
-      function generateSTL(geom){
-        var vertices = geom.vertices;
-        var tris     = geom.faces;
-
-        stl = "solid pixel";
-        for(var i = 0; i<tris.length; i++){
-          stl += ("facet normal "+tris[i].normal.x+" "+tris[i].normal.y+" "+tris[i].normal.z+" \n");
-          stl += ("outer loop \n");
-          stl += ("vertex "+vertices[ tris[i].a ].x+" "+vertices[ tris[i].a ].y+" "+vertices[ tris[i].a ].z+" \n");
-          stl += ("vertex "+vertices[ tris[i].b ].x+" "+vertices[ tris[i].b ].y+" "+vertices[ tris[i].b ].z+" \n");
-          stl += ("vertex "+vertices[ tris[i].c ].x+" "+vertices[ tris[i].c ].y+" "+vertices[ tris[i].c ].z+" \n");
-          stl += ("endloop \n");
-          stl += ("endfacet \n");
-        }
-        stl += ("endsolid");
-
-        return stl
-      }
     </script>
 
   </body>
