@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" type="text/css" href="stylesheets/lathe.css" />
+    <script src="javascripts/jquery.js"></script>
+    <script src="javascripts/three.js"></script>
+    <script src="javascripts/undo_stack.js"></script>
+    <script src="javascripts/subsegments.js"></script> 
+    <script src="javascripts/beadedString.js"></script>
+    <script src="javascripts/FileSaver.js"></script>
+    <script src="javascripts/stlWriter.js"></script>
+    <script src="javascripts/lathe.js"></script>
+
+  </head>
+  <body>
+<div id="editor">
+  <div id="sidebar">
+    <div id="tools">
+      <div class="tool selected">
+       <a href="#"><img src="icons/Ramp.png" id="ramp"></a>
+      </div>
+<!--       <div class="tool">
+       <a href="#"><img src="./images/icons/Ramp.png" id="ramp" /></a>
+      </div> -->
+      <div class="tool">
+       <a href="#"><img src="icons/Pinch.png" id="pinch" ></a>
+      </div>
+      <div class="tool">
+       <a href="#"><img src="icons/Square.png" id="square"></a>
+      </div>
+     <div class="tool">
+       <a href="#"><img src="icons/Rounded.png" id="rounded"></a>
+      </div>
+    </div>
+    <div class="tool">
+      <button id="submit">Save</button>
+      <button id="undo">Undo</button>
+
+    </div>
+    <div id="debug"></div>
+  </div>
+</div>
+</body>
+</html
