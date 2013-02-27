@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Pixel Printer</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+      body {
+        font-family: Monospace;
+        background-color: #f0f0f0;
+        margin: 0px;
+        overflow: hidden;
+      }
+    </style>
+
+    <script src="javascripts/three.js"></script>
+    <script src="javascripts/mesh.js"></script>
+    <script src="javascripts/FileSaver.js"></script>
+    <script src="javascripts/audio.js"></script>
+       <script src="../lib/js/dat.gui.js"></script>
+
+    <script src="shaders/CopyShader.js"></script>
+    <script src="shaders/DotScreenShader.js"></script>
+    <script src="shaders/RGBShiftShader.js"></script>
+    <script src="shaders/EdgeShader.js"></script>
+        <script src="shaders/ConvolutionShader.js"></script>
+        <script src="shaders/BokehShader.js"></script>
+    <script src="shaders/FilmShader.js"></script>
+
+
+
+    <script src="postprocessing/EffectComposer.js"></script>
+    <script src="postprocessing/RenderPass.js"></script>
+    <script src="postprocessing/MaskPass.js"></script>
+    <script src="postprocessing/ShaderPass.js"></script>
+    <script src="postprocessing/BloomPass.js"></script>
+    <script src="postprocessing/FilmPass.js"></script>
+
+
+  </head>
+  <body>
+    <script>
+          var postprocessing = { enabled  : true };
+var height  = window.innerHeight;
+        var effectController  = {
+
+          focus:    1.0,
+          aperture: 0.025,
+          maxblur:  1.0,
+
+          rgb : 0.015,
+          dot : 1,
+
+         smoothness : 4,
+         gain : 1
+
+        };
+        var matChanger = function( ) {
+
+          postprocessing.bokeh_uniforms[ "focus" ].value = effectController.focus;
+          postprocessing.bokeh_uniforms[ "aperture" ].value = effectController.aperture;
+          postprocessing.bokeh_uniforms[ "maxblur" ].value = effectController.maxblur;
+
+        };
+
+        var gui = new dat.GUI();
+        gui.add( effectController, "focus", 0.0, 3.0, 0.025 ).onChange( matChanger );
+        gui.add( effectController, "aperture", 0.001, 0.2, 0.001 ).onChange( matChanger );
+        gui.add( effectController, "maxblur", 0.0, 3.0, 0.025 ).onChange( matChanger );
+        gui.add( effectController, "rgb", 0.0, 0.10, 0.00001 )
+        gui.add( effectController, "dot", 0.0, 20.0, 0.025 )
+                gui.add( effectController, "smoothness", 0.0, 40.0, 0.025 )
+                gui.add( effectController, "gain", 0.0, 5.0, 0.025 ).onChange( setGain )
+        // gui.close();
+        var material_depth = new THREE.MeshDepthMaterial();
+
+      var container, stats, dotEffect, rgbEffect, sock, effectBloom;
+      var camera, scene, renderer, composer;
+      var projector, plane, cube;
+      var mouse2D, mouse3D, raycaster, mesh,
+      rollOveredFace, isShiftDown = false,
+      theta = 90, isCtrlDown = false, particleSystem, particles;
+
+      var rollOverMesh, rollOverMaterial, voxelPosition = new THREE.Vector3(), tmpVec = new THREE.Vector3();
+      var cubeGeo, cubeMaterial;
+      var i, intersector, stars;
+
+      var gui, voxelConfig = {
+        orthographicProjection: false
+      };
+
+      init();
+      var sphere_geo = new THREE.SphereGeometry(50, 50);
+          sphere_geo.dynamic = true;
+var sphere = new THREE.Mesh( sphere_geo, new THREE.MeshBasicMaterial({wireframe : true, color : 0xA1C9E5 }));
+      function init() {
+var particleCount = 2000;
+    particles = new THREE.Geometry();
+
+var pMaterial =
+  new THREE.ParticleBasicMaterial({
+    color: 0xFAFFFF,
+    size: 20,
+    map: THREE.ImageUtils.loadTexture(
+      "img/particle.png"
+    ),
+    blending: THREE.AdditiveBlending,
+    transparent: true
+  });
+var particleSystem =
+  new THREE.ParticleSystem(
+    particles,
+    pMaterial);
+// also update the particle system to
+// sort the particles which enables
+// the behaviour we want
+particleSystem.sortParticles = true;
+      for(var p = 0; p < particleCount; p++) {
+
+  // create a particle with random
+  // position values, -250 -> 250
+  var extent = 2000;
+  var pX = Math.random() * extent - extent / 2,
+      pY = Math.random() * extent - extent / 2,
+      pZ = Math.random() * extent - extent / 2,
+      particle = new THREE.Vector3(pX, pY, pZ);
+particle.velocity = new THREE.Vector3(
+  0,              // x
+  -Math.random(), // y: random vel
+  0);             // z
+  // add it to the geometry
+  particles.vertices.push(particle);
+}
+
+
+// add it to the scene
+
+        container = document.createElement( 'div' );
+        document.body.appendChild( container );
+
+        // var info = document.createElement( 'div' );
+        // info.style.position = 'absolute';
+        // info.style.top = '10px';
+        // info.style.width = '100%';
+        // info.style.textAlign = 'center';
+        // info.innerHTML = '<a href="http://threejs.org" target="_blank"></a> <h2>pixel printer</h2> <br><strong>click</strong>: add voxel, <strong>control + click</strong>: remove voxel, <strong>shift + mousemove</strong>: rotate, <a href="javascript:save();">save .stl</a>';
+        // container.appendChild( info );
+
+        camera = new THREE.CombinedCamera( window.innerWidth, window.innerHeight, 40, 1, 10000, -2000, 10000 );
+        camera.position.y = 600;
+
+        scene = new THREE.Scene();
+        scene.fog = new THREE.Fog( 0xA1C9E5, 10, 10000 );
+
+        var jsonLoader = new THREE.JSONLoader();
+
+        var modelName = "animals_A_life";
+
+        jsonLoader.load("./models/"+modelName+".js", createScene );
+        function createScene( geometry ) {
+
+            mesh = new THREE.Mesh( 
+              geometry, 
+              new THREE.MeshLambertMaterial({ 
+                morphTargets : true,
+                // vertexColors : THREE.VertexColors,
+                // wireframe: true,
+                color: 0xA1C9E5,
+                wireframeLinewidth:0.1
+              })
+            );
+            
+            mesh.scale.set(6,6,6);
+            mesh.position.y-=500;
+            // mesh.position.z+=100;
+            // mesh.position.x+=500;
+            setMorphConstants();
+
+            scene.add( mesh );
+            // scene.add( sphere );
+
+            getMic();
+            animate();
+        }
+
+        jsonLoader.load("./models/moose_life.js", addMesh);
+
+        function addMesh( geometry ){
+            sock = new THREE.Mesh( 
+              geometry, 
+              new THREE.MeshPhongMaterial({ 
+                morphTargets : true,
+                // vertexColors : THREE.VertexColors,
+                // wireframe: true,
+                color: 0xA1C9E5,
+                wireframeLinewidth:0.1
+              })
+            );
+            
+            sock.scale.set(4,4,4);
+            sock.position.y -= 600;
+            sock.position.x -= 700;
+            sock.position.z -= 500;
+
+            setMorphConstants();
+
+            // scene.add( sock );
+        }
+        // cubes
+
+        cubeGeo = new THREE.CubeGeometry( 50, 50, 50 );
+        cubeMaterial = new THREE.MeshLambertMaterial( { color: 0x00ff80 } );
+        // cubeMaterial = new THREE.MeshNormalMaterial();
+        cubeMaterial.color.setHSV( 0.1, 0.7, 1.0 );
+        cubeMaterial.ambient = cubeMaterial.color;
+
+        // picking
+
+        projector = new THREE.Projector();
+
+        // grid
+
+        plane = new THREE.Mesh( new THREE.PlaneGeometry( 2000, 2000, 40, 40 ), new THREE.MeshBasicMaterial( { color: 0x999999, wireframe: true } ) );
+        plane.rotation.x = - Math.PI / 2;
+        plane.position.y = -300
+        // plane.position
+        scene.add( plane );
+
+        mouse2D = new THREE.Vector3( 0, 10000, 0.5 );
+
+        // Lights
+
+        var ambientLight = new THREE.AmbientLight( 0x505050 );
+        // scene.add( ambientLight );
+
+        var directionalLight = new THREE.DirectionalLight( 0xffffff );
+        directionalLight.position.set( 1, 0.75, 0.5 ).normalize();
+        scene.add( directionalLight );
+
+        var directionalLight = new THREE.DirectionalLight( 0xffffff );
+        directionalLight.position.set( -1, -0.75, 0.5 ).normalize();
+        scene.add( directionalLight );
+        
+        scene.add(particleSystem);
+
+        renderer = new THREE.WebGLRenderer( { antialias: true } );
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+        container.appendChild( renderer.domElement );
+
+
+        document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+        document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+        document.addEventListener( 'keydown', onDocumentKeyDown, false );
+        document.addEventListener( 'keyup', onDocumentKeyUp, false );
+
+        //
+
+        window.addEventListener( 'resize', onWindowResize, false );
+
+        // init audio
+
+        getMic();
+
+        // composer
+
+        composer = new THREE.EffectComposer( renderer );
+        composer.addPass( new THREE.RenderPass( scene, camera ) );
+
+
+        dotEffect = new THREE.ShaderPass( THREE.DotScreenShader );
+        dotEffect.uniforms[ 'scale' ].value = 1;
+        // composer.addPass( dotEffect );
+        
+        edgeEffect = new THREE.ShaderPass( THREE.EdgeShader );
+        edgeEffect.uniforms[ 'aspect' ].value.x = window.innerWidth;
+        edgeEffect.uniforms[ 'aspect' ].value.y = window.innerHeight;
+        composer.addPass( edgeEffect );
+        edgeEffect.renderToScreen = true;
+
+        
+        rgbEffect = new THREE.ShaderPass( THREE.RGBShiftShader );
+        rgbEffect.uniforms[ 'amount' ].value = 0.015;
+        // composer.addPass( rgbEffect );
+
+        effectFilm = new THREE.FilmPass( 0.55, 0.55, 1024, false );
+        composer.addPass( effectFilm );
+        // effectFilm.renderToScreen = true;
+
+        effectBloom = new THREE.BloomPass( 0.1 );
+        composer.addPass( effectBloom );
+        // effectBloom.renderToScreen = true;
+        initPostprocessing();
+
+
+      }
+
+      function onWindowResize() {
+
+        camera.setSize( window.innerWidth, window.innerHeight );
+        camera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+      }
+
+
+      function onDocumentMouseMove( event ) {
+
+        event.preventDefault();
+
+        mouse2D.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+        mouse2D.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+      }
+      var geometry = new THREE.Geometry();
+
+      function onDocumentMouseDown( event ) {
+
+        event.preventDefault();
+
+      }
+
+      function onDocumentKeyDown( event ) {
+
+        switch( event.keyCode ) {
+
+          case 16: isShiftDown = true; break;
+          case 17: isCtrlDown = true; break;
+
+        }
+
+      }
+
+      function onDocumentKeyUp( event ) {
+
+        switch( event.keyCode ) {
+
+          case 16: isShiftDown = false; break;
+          case 17: isCtrlDown = false; break;
+
+        }
+      }
+
+      //
+
+      function animate() {
+
+        requestAnimationFrame( animate );
+
+        render();
+
+      }
+
+      function save() {
+        var geometry = getStaticMorphedGeometry( mesh, lastKeyframe, currentKeyframe, fade );
+        var stl = generateSTL( geometry );
+        var blob = new Blob([stl], {type: 'text/plain'});
+        saveAs(blob, 'model.stl');
+      }
+
+      function getStaticMorphedGeometry( mesh ){
+        
+        var geometry = mesh.geometry.clone();
+
+        var influences = mesh.morphTargetInfluences;
+        var targets    = mesh.geometry.morphTargets;
+
+        geometry.vertices = geometry.vertices.map( function(val, i){
+          var v = new THREE.Vector3().copy( val );
+          var orig = geometry.vertices[i];
+
+          for(var n=0; n<mesh.geometry.morphTargets.length; n++){
+
+            v.x += (targets[n].vertices[i].x - orig.x)*influences[n];
+            v.y += (targets[n].vertices[i].y - orig.y)*influences[n];
+            v.z += (targets[n].vertices[i].z - orig.z)*influences[n];
+
+          }
+
+          return v;
+        });
+
+        return geometry.clone();
+      }
+
+      var radius = 600;
+      var theta = 90;
+
+      var lastKeyframe = 0, currentKeyframe = 0;
+      var keyframes, interpolation, offsetFrame, duration;
+      var forward = true;
+      var lastTime = 0, fade;
+
+      function setMorphConstants(){
+        // keyframes = mesh.geometry.morphTargets.length;
+        keyframes     = 50;
+        offsetFrame   = 0;
+
+        // mesh.morphTargetInfluences[ offsetFrame ] = 1;
+
+        duration      = 1000;
+        interpolation = duration / keyframes;
+      }
+
+      function lerpFrames(f1, f2, fade){
+        mesh.morphTargetInfluences[ f1 ] = fade;
+        mesh.morphTargetInfluences[ f2 ] = 1 - fade;
+      }
+
+      var cursor = 0;
+      var frame = 0;
+      var freq = 0.05;
+      function render() {
+        frame++;
+        if ( isShiftDown ) {
+
+          theta += mouse2D.x * 1.5;
+
+        } else {
+
+          fade = mouse2D.x / 2.0 + 0.5;
+          // if(lastTime > fade && forward) { forward = false; }
+          // else if (lastTime < fade && !forward) {forward = true;}
+          // lastKeyframe = 49;
+          // currentKeyframe = 60
+
+          // lerpFrames( lastKeyframe, currentKeyframe, fade );
+
+        }
+
+        camera.position.x = 1800 * Math.sin( THREE.Math.degToRad( theta ) );
+        camera.position.z = 1800 * Math.cos( THREE.Math.degToRad( theta ) );
+
+        camera.lookAt( scene.position );
+        if(particleSystem){
+          particleSystem.rotation.y += 0.5*audio+Math.random();
+          particleSystem.rotation.z += 5*audio+Math.random();
+          particleSystem.rotation.x += 3.25*audio+Math.random();
+        }
+          // Alternate morph targets
+
+          // var time = Date.now() % duration;
+          
+          var audio = getAnalyserData();
+          // audio = 0;
+                  var timescale = Math.abs( Math.sin(audio+0.05*frame) );
+          // lastKeyframe = 80;
+          // currentKeyframe = 150
+
+          // lerpFrames( lastKeyframe, currentKeyframe,audio);
+
+          // mesh.position.y = -700*audio;
+          // theta  += 10*(audio-0.5)*0.5;
+          // sock.rotation.y = -2*(audio-0.5);
+
+          dotEffect.uniforms[ 'scale' ].value = effectController.dot;
+          rgbEffect.uniforms[ 'amount' ].value = effectController.rgb;
+
+          // mesh.scale.set( 5+audio*2, 5+audio*2, 5+audio*2 );
+
+          // mesh.position.x = audio*500 - 250;
+          // mesh.position.z = audio*500 - 250;
+          
+          sock.position.x = Math.random()*(0.5*audio)*1000 - 250;
+          sock.position.z = Math.random()*(0.5*audio)*1000 - 250;
+          
+          var time = (1-audio) * duration;
+          
+          time =  clamp( time, lastTime - audio*effectController.smoothness, lastTime+audio*effectController.smoothness)
+          
+          mesh.material.color = ( new THREE.Color().setHSL( audio, 0.5, 0.5 ) )
+
+          // sphere.radius = audio*1000;
+          // sphere.scale.set( audio*10, audio*10, audio*10 );
+          // var keyframe = offsetFrame + Math.floor( audio * keyframes );
+          var keyframe = offsetFrame + Math.floor( time / interpolation );
+
+                        lastTime = time;
+
+
+          if ( keyframe != currentKeyframe ) {
+
+            mesh.morphTargetInfluences[ lastKeyframe ] = 0;
+            mesh.morphTargetInfluences[ currentKeyframe ] = 1;
+            mesh.morphTargetInfluences[ keyframe ] = 0;
+            
+sock.morphTargetInfluences[ lastKeyframe ] = 0;
+sock.morphTargetInfluences[ currentKeyframe ] = 1;
+sock.morphTargetInfluences[ keyframe ] = 0;
+
+            lastKeyframe = currentKeyframe;
+            currentKeyframe = keyframe;
+
+            // console.log( mesh.morphTargetInfluences );
+
+          }
+
+          mesh.morphTargetInfluences[ keyframe ] = ( time % interpolation ) / interpolation;
+          mesh.morphTargetInfluences[ lastKeyframe ] = 1 - mesh.morphTargetInfluences[ keyframe ];
+
+
+          sock.morphTargetInfluences[ keyframe ] = ( time % interpolation )  / interpolation;
+          sock.morphTargetInfluences[ lastKeyframe ] = 1 - mesh.morphTargetInfluences[ keyframe ];
+          if(particles){ updatePositions() };
+        composer.render();
+        // render_post();
+      }
+
+      function updatePositions(){
+        for(var n=0; n<2000; n++){
+        var particle = 
+            particles.vertices[n];
+
+          // check if we need to reset
+          if(particle.y < -1000) {
+            particle.y = Math.random()*1500+500;
+            particle.velocity.y = 0;
+          }
+
+          // update the velocity with
+          // a splat of randomniz
+          particle.velocity.y -=
+            Math.random() * .01 + 0.002;
+          particle.velocity.x += Math.random()*0.1-0.05;
+
+          particle.velocity.z += Math.random()*0.1-0.05;
+
+          // and the position
+          particle.x += particle.velocity.x;
+
+          particle.y += particle.velocity.y;
+          particle.z += particle.velocity.z;
+        }
+      }
+      function clamp(x, min, max){
+        if(x > max) { return max; }
+        if(x < min) { return min; }
+
+        return x;
+      }
+
+      function initPostprocessing() {
+
+        postprocessing.scene = new THREE.Scene();
+
+        postprocessing.camera = new THREE.OrthographicCamera( window.innerWidth / - 2, window.innerWidth / 2,  window.innerHeight / 2, window.innerHeight / - 2, -10000, 10000 );
+        postprocessing.camera.position.z = 1000;
+
+        postprocessing.scene.add( postprocessing.camera );
+
+        var pars = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat };
+        postprocessing.rtTextureDepth = new THREE.WebGLRenderTarget( window.innerWidth, height, pars );
+        postprocessing.rtTextureColor = new THREE.WebGLRenderTarget( window.innerWidth, height, pars );
+
+        var bokeh_shader = THREE.BokehShader;
+
+        postprocessing.bokeh_uniforms = THREE.UniformsUtils.clone( bokeh_shader.uniforms );
+
+        postprocessing.bokeh_uniforms[ "tColor" ].value = postprocessing.rtTextureColor;
+        postprocessing.bokeh_uniforms[ "tDepth" ].value = postprocessing.rtTextureDepth;
+        postprocessing.bokeh_uniforms[ "focus" ].value = 1.1;
+        postprocessing.bokeh_uniforms[ "aspect" ].value = window.innerWidth / height;
+
+        postprocessing.materialBokeh = new THREE.ShaderMaterial( {
+
+          uniforms: postprocessing.bokeh_uniforms,
+          vertexShader: bokeh_shader.vertexShader,
+          fragmentShader: bokeh_shader.fragmentShader
+
+        } );
+
+        postprocessing.quad = new THREE.Mesh( new THREE.PlaneGeometry( window.innerWidth, window.innerHeight ), postprocessing.materialBokeh );
+        postprocessing.quad.position.z = - 500;
+        postprocessing.scene.add( postprocessing.quad );
+
+      }
+
+      function render_post(){
+
+          renderer.clear();
+
+          // Render scene into texture
+
+          scene.overrideMaterial = null;
+          renderer.render( scene, camera, postprocessing.rtTextureColor, true );
+
+          // Render depth into texture
+
+          scene.overrideMaterial = material_depth;
+          renderer.render( scene, camera, postprocessing.rtTextureDepth, true );
+
+          // Render bokeh composite
+          // composer.render( postprocessing.scene, postprocessing.camera);
+          renderer.render( postprocessing.scene, postprocessing.camera );
+
+
+       
+      }
+    </script>
+  </body>
+</html>

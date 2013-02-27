@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Morph Targets</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+      body {
+        font-family: Monospace;
+        background-color: #f0f0f0;
+        margin: 0px;
+        overflow: hidden;
+        line-height: 1.55em;
+      }
+      /*h2 { padding-bottom: 0;}*/
+      a { color: inherit; }
+    </style>
+
+    <script src="javascripts/three.js"></script>
+    <script src="javascripts/mesh.js"></script>
+    <script src="javascripts/FileSaver.js"></script>
+
+  </head>
+  <body>
+    <script>
+      var container, stats;
+      var camera, scene, renderer;
+      var projector, plane, cube;
+      var mouse2D, mouse3D, raycaster, mesh,
+      rollOveredFace, isShiftDown = false,
+      theta = 90, isCtrlDown = false;
+
+      var rollOverMesh, rollOverMaterial, voxelPosition = new THREE.Vector3(), tmpVec = new THREE.Vector3();
+      var cubeGeo, cubeMaterial;
+      var i, intersector;
+
+      var gui, voxelConfig = {
+        orthographicProjection: false
+      };
+
+      init();
+
+      function init() {
+
+        container = document.createElement( 'div' );
+        document.body.appendChild( container );
+
+        var info = document.createElement( 'div' );
+        info.style.position = 'absolute';
+        info.style.top = '10px';
+        info.style.width = '100%';
+        info.style.textAlign = 'center';
+        info.innerHTML = '<a href="http://threejs.org" target="_blank"></a> <h3>morph targets</h3> <br><strong>mousemove</strong>: interpolate, <strong>shift + mousemove</strong>: rotate, <strong>ctrl + click</strong> save STL<br>models from <a href="#">ro.me</a>';
+        container.appendChild( info );
+
+        camera = new THREE.CombinedCamera( window.innerWidth, window.innerHeight, 40, 1, 10000, -2000, 10000 );
+        camera.position.y = 400;
+
+        scene = new THREE.Scene();
+
+        var jsonLoader = new THREE.JSONLoader();
+
+        var modelName = "animals_A_life";
+
+        jsonLoader.load("./models/"+modelName+".js", createScene );
+        function createScene( geometry ) {
+
+            mesh = new THREE.Mesh( 
+              geometry, 
+              new THREE.MeshLambertMaterial({ 
+                morphTargets : true,
+                // vertexColors : THREE.VertexColors,
+                // wireframe: true,
+                color: 0xA1C9E5,
+                // wireframeLinewidth:0.1
+              })
+            );
+            
+            mesh.scale.set(5,5,5);
+            mesh.position.y-=450;
+
+            setMorphConstants();
+
+            scene.add( mesh );
+            // getMic( animate );
+            animate();
+        }
+        // cubes
+
+
+        // grid
+
+        plane = new THREE.Mesh( new THREE.PlaneGeometry( 1800, 1800, 30, 30 ), new THREE.MeshBasicMaterial( { color: 0x999999, wireframe: true } ) );
+        plane.rotation.x = - Math.PI / 2;
+        plane.position.y = -450
+        // plane.position
+        scene.add( plane );
+
+        mouse2D = new THREE.Vector3( 0, 10000, 0.5 );
+
+        // Lights
+
+        var ambientLight = new THREE.AmbientLight( 0x202020 );
+        // scene.add( ambientLight );
+
+        var directionalLight = new THREE.DirectionalLight( 0xffffff );
+        directionalLight.position.set( -0.5, 0.95, -0.5 ).normalize();
+        scene.add( directionalLight );
+
+        var directionalLight = new THREE.DirectionalLight( 0xffffff );
+        directionalLight.position.set( 1, 0.5, 0.5 ).normalize();
+        scene.add( directionalLight );
+
+        renderer = new THREE.WebGLRenderer( { antialias: true } );
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+        container.appendChild( renderer.domElement );
+
+
+        document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+        document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+        document.addEventListener( 'keydown', onDocumentKeyDown, false );
+        document.addEventListener( 'keyup', onDocumentKeyUp, false );
+
+        //
+
+        window.addEventListener( 'resize', onWindowResize, false );
+
+        // add GUI
+
+      }
+
+      function onWindowResize() {
+
+        camera.setSize( window.innerWidth, window.innerHeight );
+        camera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+      }
+
+
+      function onDocumentMouseMove( event ) {
+
+        event.preventDefault();
+
+        mouse2D.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+        mouse2D.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+      }
+      var geometry = new THREE.Geometry();
+
+      function onDocumentMouseDown( event ) {
+
+        event.preventDefault();
+
+      }
+
+      function onDocumentKeyDown( event ) {
+
+        switch( event.keyCode ) {
+
+          case 16: isShiftDown = true; break;
+          case 17: isCtrlDown = true; break;
+          case 83: 
+            if(isCtrlDown){ save(); }
+            break;
+        }
+
+      }
+
+      function onDocumentKeyUp( event ) {
+
+        switch( event.keyCode ) {
+
+          case 16: isShiftDown = false; break;
+          case 17: isCtrlDown = false; break;
+
+        }
+      }
+
+      //
+
+      function animate() {
+
+        requestAnimationFrame( animate );
+
+        render();
+
+      }
+
+      function save() {
+        var geometry = getStaticMorphedGeometry( mesh, lastKeyframe, currentKeyframe, fade );
+        var stl = generateSTL( geometry );
+        var blob = new Blob([stl], {type: 'text/plain'});
+        saveAs(blob, 'model.stl');
+      }
+
+      function getStaticMorphedGeometry( mesh ){
+        
+        var geometry = mesh.geometry.clone();
+
+        var influences = mesh.morphTargetInfluences;
+        var targets    = mesh.geometry.morphTargets;
+
+        geometry.vertices = geometry.vertices.map( function(val, i){
+          var v = new THREE.Vector3().copy( val );
+          var orig = geometry.vertices[i];
+
+          for(var n=0; n<mesh.geometry.morphTargets.length; n++){
+
+            v.x += (targets[n].vertices[i].x - orig.x)*influences[n];
+            v.y += (targets[n].vertices[i].y - orig.y)*influences[n];
+            v.z += (targets[n].vertices[i].z - orig.z)*influences[n];
+
+          }
+
+          return v;
+        });
+
+        return geometry.clone();
+      }
+
+      var radius = 1900;
+      var theta = 45;
+
+      var lastKeyframe = 0, currentKeyframe = 0;
+      var keyframes, interpolation, offsetFrame, duration;
+      var forward = true, lastFade = 0;;
+      var lastTime = 0, fade;
+
+      function setMorphConstants(){
+        // keyframes = mesh.geometry.morphTargets.length;
+        keyframes     = 70;
+        offsetFrame   = 0;
+
+        // mesh.morphTargetInfluences[ offsetFrame ] = 1;
+
+        duration      = 20000;
+        interpolation = duration / keyframes;
+      }
+
+      function lerpFrames(f1, f2, fade){
+        mesh.morphTargetInfluences[ f1 ] = fade;
+        mesh.morphTargetInfluences[ f2 ] = 1 - fade;
+      }
+
+      function render() {
+
+        if ( isShiftDown ) {
+
+          theta += mouse2D.x * 1.5;
+
+        } else {
+
+          fade = mouse2D.x / 2.0 + 0.5;
+          if(lastFade> fade && forward) { forward = false; }
+          else if (lastFade < fade && !forward) {forward = true;}
+          lastFade = fade;
+          // lastKeyframe = 49;
+          // currentKeyframe = 60
+
+          // lerpFrames( lastKeyframe, currentKeyframe, fade );
+
+        }
+
+        camera.position.x = radius * Math.sin( THREE.Math.degToRad( theta ) );
+        camera.position.z = radius * Math.cos( THREE.Math.degToRad( theta ) );
+
+        camera.lookAt( scene.position );
+
+
+          // Alternate morph targets
+
+          // var time = Date.now() % duration;
+          
+          var time = fade * duration;
+          var keyframe = offsetFrame + ( forward ? Math.floor( time / interpolation ) : Math.floor( time / interpolation ) );
+
+              
+
+          if ( keyframe != currentKeyframe ) {
+
+            mesh.morphTargetInfluences[ lastKeyframe ] = 0;
+            mesh.morphTargetInfluences[ currentKeyframe ] = 1;
+            mesh.morphTargetInfluences[ keyframe ] = 0;
+
+            lastKeyframe = currentKeyframe;
+            currentKeyframe = keyframe;
+
+            // console.log( mesh.morphTargetInfluences );
+
+          }
+
+          mesh.morphTargetInfluences[ keyframe ] = forward ? ( time % interpolation ) / interpolation : 1 - ( time % interpolation ) / interpolation;
+          mesh.morphTargetInfluences[ lastKeyframe ] = 1 - mesh.morphTargetInfluences[ keyframe ];
+        renderer.render( scene, camera );
+
+      }
+    </script>
+  </body>
+</html>
