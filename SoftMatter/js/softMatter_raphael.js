@@ -171,8 +171,8 @@ function createFromDOMObjects() {
     
     var radius = Math.random()*15+22;
 
-   var x = center.x-bounding_radius/2 +Math.random()*bounding_radius;
-          var y = center.y-bounding_radius/2 +Math.random()*bounding_radius;
+   var x = center.x-2*bounding_radius/3 +Math.random()*3*bounding_radius/2;
+   var y = center.y-bounding_radius/2 +Math.random()*bounding_radius;
 
 
     var circle = paper.circle(x, y, radius);
@@ -195,7 +195,7 @@ $(".member-name").each(function (a,b) {
   // radius = widths[]
     var name = $(b).attr('id')
     var radius = widths[name]*12;
-          var x = center.x-bounding_radius/2 +Math.random()*bounding_radius;
+   var x = center.x-2*bounding_radius/3 +Math.random()*3*bounding_radius/2;
           var y = center.y-bounding_radius/2 +Math.random()*bounding_radius;
 
     var circle = paper.circle(x, y, radius);
@@ -212,7 +212,7 @@ $(".member-name").each(function (a,b) {
         name_text.attr({
 
           fill: "#34495e",
-          font: "22px 'Lato', sans-serif",
+          font: "22px 'Open Sans', 'Lato', sans-serif",
           'font-weight':700
 
         })
