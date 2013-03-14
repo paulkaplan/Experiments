@@ -169,10 +169,11 @@ function createFromDOMObjects() {
 // filler
     for(var n=0; n<fillerNumber; n++){
     
-    var radius = Math.random()*10+22;
+    var radius = Math.random()*15+22;
 
-    var x = center.x/2+Math.random()*center.x
-    var y = center.y/2+Math.random()*center.y;
+   var x = center.x-bounding_radius/2 +Math.random()*bounding_radius;
+          var y = center.y-bounding_radius/2 +Math.random()*bounding_radius;
+
 
     var circle = paper.circle(x, y, radius);
         circle.attr({
@@ -194,8 +195,8 @@ $(".member-name").each(function (a,b) {
   // radius = widths[]
     var name = $(b).attr('id')
     var radius = widths[name]*12;
-          var x = center.x/2+Math.random()*center.x
-          var y = center.y/2+Math.random()*center.y;
+          var x = center.x-bounding_radius/2 +Math.random()*bounding_radius;
+          var y = center.y-bounding_radius/2 +Math.random()*bounding_radius;
 
     var circle = paper.circle(x, y, radius);
         circle.attr({
