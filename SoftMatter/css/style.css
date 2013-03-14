@@ -1,0 +1,105 @@
+html, body {
+  background: #ebe7df;
+  
+}
+.member-name {
+  font-size:1.6em;
+  font-weight:900;
+  /* like an h1 */
+/*  margin: 10px 0;*/
+  font-family: inherit;
+  font-weight: bold;
+/*  line-height: 1em;*/
+  color: inherit;
+  text-rendering: optimizelegibility;
+  
+/*  float:left;*/
+  text-align:center;
+  
+        width: 5em; 
+        height:5em; 
+        /*background:#57C7A9; */
+        /*float: right; */
+        /*margin:5px; */
+        margin:0; padding:0;
+        position:absolute; 
+        background-image:url('../img/disk_green.png');
+        background-size: cover;
+        background-repeat: no-repeat;
+/*    margin-bottom:-2em;*/
+/*    margin-top:2em;*/
+/*
+    line-height:5em;
+*/
+}
+
+
+/* names */
+#jaeger{
+  width:8em; height:8em; line-height:8em;
+/*  -webkit-filter: hue-rotate(50deg);  */
+}
+#irvine{
+  width:7.4em; height: 7.4em; line-height:7.4em;
+/*-webkit-filter: hue-rotate(90deg);  */
+}
+#nagel{
+  width:6em; height:6em; line-height:6em;
+/*-webkit-filter: hue-rotate(120deg);  */
+}
+#kadanoff{
+  width:7em; height:7em; line-height:7em;
+/*-webkit-filter: hue-rotate(-0deg);  */
+}
+#witten{
+  width:6.4em; height:6.4em; line-height:6.4em;
+
+}
+#zhang{
+  width:7em; height:7em; line-height:7em;
+
+}
+
+.container{
+        position: absolute;
+        left: 0;
+        top: 0;
+        -webkit-transform: translate3d(0,0,1px);
+        -o-transform: translate3d(0,0,1px);
+        -moz-transform: translate3d(0,0,1px);
+        -ms-transform: translate3d(0,0,1px);
+        transform: translate3d(0,0,1px);
+/*        background-color: black;*/
+        -webkit-perspective: 1000; 
+        -webkit-backface-visibility: hidden;
+
+        -webkit-transition-property: -webkit-transform;
+        -webkit-transition-duration: 0.1;
+
+}
+
+.circle-el { 
+  background:#F1C40F;
+}
+/*canvas { z-index:10000; }*/
+
+.static { 
+    position:absolute;
+    width:2.5em;
+    height:2.5em;
+/*    background:#7F8C8D*/
+        
+        background-image:url('../img/disk_gray.png');
+        background-size: cover;
+        background-repeat: no-repeat;
+    
+    z-index:-100;
+}
+.filler { 
+    position:absolute;
+    width:3em;
+    height:3em; 
+        background-image:url('../img/disk_red.png');
+        background-size: cover;
+        background-repeat: no-repeat;
+}
