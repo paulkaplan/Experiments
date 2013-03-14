@@ -78,6 +78,7 @@ html, body {
 
 }
 
+.hidden{ display: none;}
 .circle-el { 
   background:#F1C40F;
 }
