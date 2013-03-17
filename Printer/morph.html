@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Pixel Printer</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+    <!-- <link rel="stylesheet" type="text/css" href="css/style.css"> -->
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.css">
+    <link rel="stylesheet" type="text/css" href="css/flat-ui.css">
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+
+    <script src="javascripts/three.js"></script>
+    <script src="javascripts/mesh.js"></script>
+    <script src="javascripts/FileSaver.js"></script>
+    <script src="javascripts/manipulation.js"></script>
+    <script src="javascripts/STLLoader.js"></script>
+
+    <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>    <script src="javascripts/jquery-ui.js"></script>
+
+    <script src="../lib/js/detector.js"></script>
+
+    <script src="javascripts/TrackballControls.js"></script>
+
+  </head>
+  <body>
+  <div id="operations">
+      <a href="#" class="button">
+          <span class="txt">Operations</span>
+          <span class="ar">&#9660;</span>
+      </a>
+      <div class="menu">
+          <ul>
+              <li><a id="translate" href="#">Translate</a></li>
+              <li><a id="scale" href="#">Scale</a></li>
+              <li><a id="rotate" href="#">Rotate</a></li>
+              <li><a id="remove" href="#">Remove</a></li>
+          </ul>
+      </div>
+  </div>
+
+  <div id="menu-container" class="span4">
+    <div id="primitives" class="span4">
+      <a href="#" class="button">
+        <span class="txt">Primitives</span>
+        <span class="ar">&#9660;</span>
+      </a>
+      <div class="menu">
+          <ul>
+              <li><a class="model-link primitive" id="cube" href="#">Cube</a></li>
+              <li><a class="model-link primitive" id="sphere" href="#">Sphere</a></li>
+              <li><a class="model-link primitive" id="torus" href="#">Torus</a></li>
+          </ul> 
+      </div>
+    </div>
+
+    <div id="models" class="span4">
+      <a href="#" class="button">
+        <span class="txt">Models</span>
+        <span class="ar">&#9660;</span>
+      </a>
+      <div class="menu">
+          <ul>
+              <li><a class="model-link animal" id="horse" href="#">Horse</a></li>
+              <li><a class="model-link animal" id="bear" href="#">Bear</a></li>
+              <li><a class="model-link animal" id="owl" href="#">Owl</a></li>
+              <li><a class="model-link animal" id="eagle" href="#">Eagle</a></li>
+          </ul> 
+      </div>
+    </div>
+
+    <div id="morphModels" class="span4">
+      <a href="#" class="button">
+        <span class="txt">Morphable</span>
+        <span class="ar">&#9660;</span>
+      </a>
+      <div class="menu">
+          <ul>
+              <li><a class="model-link morph" id="robot_morph" href="#">Robot</a></li>
+          </ul> 
+      </div>
+    </div>
+
+    <div id="morph-menu" class="span4">
+      <div id="morph-sliders">
+          <ul>
+<!--               <li id="X" class="axis"><a href="#">X</a></li>
+              <li id="Y" class="axis"><a href="#">Y</a></li>
+              <li id="Z" class="axis"><a href="#">Z</a></li> -->
+          </ul> 
+      </div>
+    </div>
+
+    <div id="editing" class="span4">
+      <!-- <a href="#" class="button"> -->
+      <h5>
+        <span class="txt">Editing</span>
+      <!-- </a> -->
+      </h5>
+      <div class="xyz">
+          <ul>
+              <li id="X" class="axis"><a href="#">X</a></li>
+              <li id="Y" class="axis"><a href="#">Y</a></li>
+              <li id="Z" class="axis"><a href="#">Z</a></li>
+          </ul> 
+      </div>
+      <form>
+          <!-- <input type="text" val="stl file url"></input> -->
+      </form>
+    </div>
+
+  </div>
+    <script>
+      var container, stats;
+      var camera, controls, scene, projector, renderer;
+      var objects = [], plane;
+
+        var mouse = new THREE.Vector2(), mouseScreen = new THREE.Vector2(),
+        offset = new THREE.Vector3(),
+        INTERSECTED, SELECTED, STATE;
+
+
+      function init() {
+
+        container = document.createElement( 'div' );
+        document.body.appendChild( container );
+
+        camera = new THREE.PerspectiveCamera( 35, window.innerWidth / window.innerHeight, 0.01, 100 );
+        camera.position.z = 2.5;
+        camera.position.y = 1;
+        camera.position.x = 1;
+
+        camera.lookAt( new THREE.Vector3(0, 0.35, 0) );
+        // camera.up = new THREE.Vector3(0,0,1)
+        // camera.lookAt(0, 20, 0);
+
+        controls = new THREE.OrbitControls( camera );
+        controls.center = new THREE.Vector3(0, 0.35, 0);
+        controls.update()
+
+        scene = new THREE.Scene();
+
+        scene.add( new THREE.AmbientLight( 0x505050 ) );
+
+        var light = new THREE.SpotLight( 0xffffff, 1.5 );
+        light.position.set( 100, 2000, 1000 );
+        light.castShadow = true;
+
+        light.shadowCameraNear = 200;
+        light.shadowCameraFar = camera.far;
+        light.shadowCameraFov = 50;
+
+        light.shadowBias = -0.00022;
+        light.shadowDarkness = 0.5;
+
+        light.shadowMapWidth = 2048;
+        light.shadowMapHeight = 2048;
+
+        scene.add( light );
+
+        var geometry = new THREE.SphereGeometry( 0.4, 30 , 30 );
+
+        // for ( var i = 0; i < 200; i ++ ) {
+
+          var object = new THREE.Mesh( geometry, new THREE.MeshNormalMaterial() );
+
+          object.material.ambient = object.material.color;
+
+          // object.position.y += 20
+        //   object.position.x = Math.random() * 1000 - 500;
+        //   object.position.y = Math.random() * 600 - 300;
+        //   object.position.z = Math.random() * 800 - 400;
+
+        //   object.rotation.x = Math.random() * 2 * Math.PI;
+        //   object.rotation.y = Math.random() * 2 * Math.PI;
+        //   object.rotation.z = Math.random() * 2 * Math.PI;
+        object.position.y += 0.25;
+        //   object.castShadow = true;
+        //   object.receiveShadow = true;
+
+          // scene.add( object );
+          // addEditableObject( object );
+        //   objects.push( object );
+
+        // }
+
+        plane = new THREE.Mesh( new THREE.PlaneGeometry( 2, 2, 20, 20 ), new THREE.MeshBasicMaterial( { color: 0x000000, opacity: 0.25, transparent: true, wireframe: true } ) );
+        // plane.visible = false;
+        plane.rotation.x = - Math.PI / 2;
+        scene.add( plane );
+
+        projector = new THREE.Projector();
+
+        renderer = new THREE.WebGLRenderer( { antialias: true } );
+        // renderer.sortObjects = false;
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+        renderer.shadowMapEnabled = true;
+        renderer.shadowMapType = THREE.PCFShadowMap;
+
+        container.appendChild( renderer.domElement );
+
+
+        renderer.domElement.addEventListener( 'mousemove', onDocumentMouseMove, false );
+        renderer.domElement.addEventListener( 'mousedown', onDocumentMouseDown, false );
+        renderer.domElement.addEventListener( 'mouseup', onDocumentMouseUp, false );
+
+        //
+
+        addRotationHelper();
+
+        window.addEventListener( 'resize', onWindowResize, false );
+
+      }
+
+      function onWindowResize() {
+
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+      }
+
+      function onDocumentMouseMove( event ) {
+
+        event.preventDefault();
+
+        mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+        mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+        mouseScreen.x = event.clientX;
+        mouseScreen.y = event.clientY;
+        
+        // rotation helper x y z
+        
+        if(STATE==states.ROTATE){
+
+          var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 );
+          projector.unprojectVector( vector, camera );
+
+          if(SELECTED){
+            var objScreenPosition = worldToScreen( SELECTED.position );
+
+            var theta = Math.atan( (mouse.y-objScreenPosition.y) / (mouse.x-objScreenPosition.x) );
+            
+            switch( rotating.axis ){
+                case 'X': SELECTED.rotation.x = theta; break;
+                case 'Y': SELECTED.rotation.y = theta; break;
+                case 'Z': SELECTED.rotation.z = theta; break;
+            }
+
+            rotateRotationHelper( SELECTED.rotation.clone() );
+
+          }
+
+        }
+
+        if(STATE==states.SCALE){
+          var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 );
+          projector.unprojectVector( vector, camera );
+
+          if(SELECTED){
+            var objScreenPosition = worldToScreen( SELECTED.position );
+            var delta = mouseScreen.distanceTo( objScreenPosition );
+                delta /= scaling.originalPoint.distanceTo( objScreenPosition)
+
+            SELECTED.scale = scaling.originalScale.clone().multiplyScalar( delta );
+
+          }
+        }
+        if(STATE==states.TRANSLATE){
+
+        var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 );
+        projector.unprojectVector( vector, camera );
+
+        var raycaster = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+
+
+        if ( SELECTED ) {
+            var intersects = raycaster.intersectObject( plane );
+            SELECTED.position.copy( intersects[ 0 ].point.sub( offset ) );
+            // SELECTED.position.y += 20;
+            return;
+
+        }
+
+
+
+
+        var intersects = raycaster.intersectObjects( editables);
+        // console.log(intersects)
+        if ( intersects.length > 0 ) {
+
+          if ( INTERSECTED != intersects[ 0 ].object ) {
+
+            if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+
+            INTERSECTED = intersects[ 0 ].object;
+            INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
+
+          }
+
+          container.style.cursor = 'pointer';
+
+        } else {
+
+          if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+
+          INTERSECTED = null;
+
+          container.style.cursor = 'auto';
+
+        }
+
+      }
+
+      }
+
+      function onDocumentMouseDown( event ) {
+
+        event.preventDefault();
+        
+
+                var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 );
+        projector.unprojectVector( vector, camera );
+
+        var raycaster = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+
+        //
+        // rotation helper
+
+        if( STATE===states.ROTATE ){
+          
+          var intersectsRotation = raycaster.intersectObjects( rotationHelper );
+          
+          if( intersectsRotation.length > 0 ){
+
+            setAxis( intersectsRotation[0].object.name );
+
+            return;
+
+          }
+
+        }
+
+        if(SELECTED && STATE!=states.FREE){
+
+          STATE = states.FREE;
+          return;
+
+        }
+
+        var intersects = raycaster.intersectObjects( editables );
+
+
+        if ( intersects.length > 0 ) {
+
+          controls.enabled = false;
+
+          SELECTED = intersects[ 0 ].object;
+           $("#operations").show();
+          updateMenu()
+
+
+          // var intersects = raycaster.intersectObject( plane );
+          // offset.copy( intersects[ 0 ].point ).sub( plane.position );
+
+          container.style.cursor = 'move';
+
+        } else {
+          SELECTED = null;
+          $("#operations").hide();
+          $("#editing").hide();
+          hideRotationHelper();
+        }
+
+      }
+
+      function onDocumentMouseUp( event ) {
+
+        event.preventDefault();
+
+        controls.enabled = true;
+
+        if ( INTERSECTED ) {
+
+          // plane.position.copy( INTERSECTED.position );
+          // $("#operations").hide();
+
+          // SELECTED = null;
+
+        }
+
+        container.style.cursor = 'auto';
+
+      }
+
+      //
+
+      function animate() {
+
+        requestAnimationFrame( animate );
+
+        render();
+
+      }
+
+      function render() {
+
+        controls.update();
+
+        renderer.render( scene, camera );
+
+      }
+
+    
+      function save() {
+        var stl = startExport();
+
+        var blob = new Blob([stl], {type: 'text/plain'});
+        saveAs(blob, 'pixel_printer.stl');
+      }
+
+      var states = {
+        FREE : 0,
+        SCALE : 1,
+        TRANSLATE : 2,
+        ROTATE : 3
+      }
+
+      function scaleSelected( obj, baseScale ){
+
+        // var mouse2D = worldToScree
+        var original_pos = worldToScreen( obj.position );
+        var current_scale = obj.scale;
+        // var delta = mouse2D.distanceTo( obj.position );
+            // delta -= obj.positionWhenSelected.distanceTo( obj.position );
+            // mouse2D = worldToScreen()
+            // delta = 1 for mouse at positionAtSelected
+        var delta = ( mouse2D.distanceTo( original_pos ) );
+            delta /= obj.positionWhenSelected.distanceTo( original_pos );
+            // delta += obj.positionWhenSelected.distanceTo( original_pos )
+            
+            // delta += obj.original_scale_scalar;
+            console.log(delta)
+            // delta /= obj.original_scale_scalar;
+
+            obj.scale = obj.current_scale.clone().multiplyScalar( delta );
+            // obj.current_scale_scalar = delta;
+
+            scale_bar.geometry.vertices[0] = obj.position;
+            scale_bar.geometry.vertices[1] = screenToWorld( mouse2D );
+            scale_bar.geometry.verticesNeedUpdate = true;
+      }
+
+
+      // https://github.com/mrdoob/three.js/issues/899
+      function worldToScreen(_worldPos) { 
+        var windowHalfX = window.innerWidth / 2;
+        var windowHalfY = window.innerHeight / 2;
+
+          var screenPos = _worldPos.clone();
+          projector.projectVector( screenPos, camera );
+
+          return screenPos;
+      }
+
+      function screenToWorld(_screenPos) {
+        var windowHalfX = window.innerWidth / 2;
+        var windowHalfY = window.innerHeight / 2;
+
+        var worldPos = _screenPos.clone();
+        worldPos.x = worldPos.x / windowHalfX - 1;
+        worldPos.y = - worldPos.y / windowHalfY + 1;
+        projector.unprojectVector( worldPos, camera );
+        return worldPos;                    
+      }
+
+var scaling = {
+  active : false,
+  originalPoint: new THREE.Vector3(),
+  currentPoint: new THREE.Vector3(),
+  originalScale: new THREE.Vector3(1,1,1),
+  currentScale:new THREE.Vector3(1,1,1)
+}
+
+var rotating = {
+  active : false,
+  originalPoint: new THREE.Vector3(),
+  currentPoint: new THREE.Vector3(),
+  originalScale: new THREE.Vector3(1,1,1),
+  currentScale:new THREE.Vector3(1,1,1),
+  
+  axis: 'X'
+}
+
+function setAxis(axis){
+  if( !(axis==='X' || axis==='Y' || axis==='Z') ){
+    console.log('error in axis choice: '+axis);
+    return;
+  }
+  rotating.axis = axis;
+  
+  $(".axis").removeClass("current-axis");
+  $("#"+axis).addClass("current-axis");
+}
+
+$(document).ready( function(){
+
+    $("#robot_morph").click();
+
+    init();
+    animate();
+
+    $("#operations").hide();
+    $(".button").show();
+
+      var button = $('.button');
+      var menu = $('.menu');
+      
+      $('ul li a', menu).each(function() {
+          $(this).append('<span />');
+      });
+      // button.show();
+      var down = false;
+      button.click(function(e){
+
+        menu = $(this).parent().children(".menu")
+
+        if( ( menu.css('display') === 'none') ){
+          menu.css({display: 'block'});
+          $('.ar', this).html('&#9650;').css({top: '3px'});
+          $(this).addClass('active');
+        } else {
+          menu.css({display: 'none'});
+          $('.ar', this).html('&#9660;').css({top: '5px'});
+          $(this).removeClass('active');
+        }
+      });
+
+    $("#translate").click( function(){
+      STATE=states.TRANSLATE;
+      $("#operations").hide()
+    })
+
+    $("#scale").click( function(){
+      STATE=states.SCALE;
+      $("#operations").hide()
+      scaling.active = true;
+
+      scaling.originalPoint = mouseScreen.clone();
+      scaling.currentPoint = mouseScreen.clone();
+
+      scaling.originalScale = SELECTED.scale.clone();
+
+    });
+
+    $("#rotate").click( function(){
+
+      STATE=states.ROTATE;
+      $("#editing").show();
+      setAxis('X');
+      $("#operations").hide()
+      rotating.active = true;
+      rotating.originalPoint = mouseScreen.clone();
+      rotating.currentPoint = mouseScreen.clone();
+
+      showRotationHelper();
+      moveRotationHelper( SELECTED.position );
+
+    })
+    $("#remove").click( function(){
+      $("#operations").hide()
+
+      var id = SELECTED.id;
+
+      // remove from editables list
+      $.each(editables, function(i){
+        if(editables[i]===undefined) editables.splice(i,1);
+        else if(editables[i].id === id) editables.splice(i,1);
+      });
+
+      // Remove from scene
+      scene.remove( SELECTED );
+    })  
+
+    $(".model-link").click( function(){
+      if( $(this).hasClass('animal') ){
+        var filename = $(this).attr('id')+".stl";
+        loadScaleAndAdd( filename );
+      } else if($(this).hasClass('morph')){
+        var filename = $(this).attr('id')+".js";
+        loadScaleAndAddMorphable( filename );
+      } else {
+        var geo;
+        switch( $(this).attr('id') ){
+          case "sphere":
+            geo = new THREE.SphereGeometry(0.5, 30, 30);
+            break;
+          case "cube":
+            geo = new THREE.CubeGeometry(0.5, 0.5, 0.5);
+            break;
+          case "torus":
+            geo = new THREE.TorusGeometry(0.5, 0.3, 20, 20);
+            break;
+        }
+        var mesh = new THREE.Mesh(geo, new THREE.MeshNormalMaterial());
+        scene.add(mesh)
+        addEditableObject( mesh );
+      }
+    });
+    
+    $("#editing").hide();
+  
+    $(".xyz ul li").click( function(){
+      setAxis( $(this).attr('id') );
+    });
+})
+
+  function loadScaleAndAdd( filename ){
+        var loader = new THREE.STLLoader();
+        
+        loader.addEventListener( 'load', function ( event ) {
+
+          var geometry = event.content;
+
+          geometry.computeBoundingSphere();
+
+          var radius = geometry.boundingSphere.radius;
+          var center = geometry.boundingSphere.center;
+
+          var mesh = new THREE.Mesh(geometry, new THREE.MeshNormalMaterial() )
+
+          mesh.scale.set(1/radius,1/radius,1/radius);
+
+          mesh.position.x -= center.x;
+          mesh.position.y -= center.y;
+          mesh.position.z -= center.z;
+
+          scene.add( mesh );
+          console.log( mesh );
+
+          addEditableObject( mesh );
+
+        });
+        loader.load( 'stl/'+filename );
+  }
+  
+  function loadScaleAndAddMorphable( filename ){
+
+        var loader = new THREE.JSONLoader;
+        
+        loader.load( 'models/'+filename, function ( geometry) {
+          
+          geometry.computeMorphNormals();
+
+          geometry.computeBoundingSphere();
+
+          var radius = geometry.boundingSphere.radius;
+          var center = geometry.boundingSphere.center;
+
+          var material = new THREE.MeshLambertMaterial({
+            morphTargets : true,
+            morphNormals : true,
+            shading      : THREE.FlatShading,
+            color        : 0x1ABC9C
+          });
+
+          var mesh = new THREE.Mesh(geometry, material)
+
+          mesh.scale.set(1/radius,1/radius,1/radius);
+
+          mesh.position.x -= center.x;
+          mesh.position.y -= center.y;
+          mesh.position.z -= center.z;
+
+          scene.add( mesh );
+          console.log( mesh );
+
+          addEditableObject( mesh );
+
+          addMorphTargetSliders( mesh );
+
+        });
+
+  }
+
+  function updateMenu( ){
+
+    var pos = mouseScreen.clone();
+
+    var offset = $("canvas").offset();
+        offset.top  += pos.y ;
+        offset.left += pos.x ;
+
+    var depthMarker = $("#operations");
+
+    depthMarker.css('top', Math.floor( offset.top ));
+    depthMarker.css('left', Math.floor( offset.left ));
+  }
+
+  var rotationHelper = undefined;
+
+  function addRotationHelper(){
+
+    var xMaterial = new THREE.MeshBasicMaterial({color:0xff0000});
+        xMaterial.side = THREE.DoubleSide;
+    var yMaterial = new THREE.MeshBasicMaterial({color:0x00ff00});
+        yMaterial.side = THREE.DoubleSide;
+    var zMaterial = new THREE.MeshBasicMaterial({color:0x0000ff});
+        zMaterial.side = THREE.DoubleSide;    
+    var xCyl = new THREE.Mesh( new THREE.TorusGeometry(0.5, 0.01, 50, 50), xMaterial);
+    var yCyl = new THREE.Mesh( new THREE.TorusGeometry(0.49, 0.01, 50, 50), yMaterial);
+        yCyl.rotation.y -= Math.PI / 2;
+    var zCyl = new THREE.Mesh( new THREE.TorusGeometry(0.48, 0.01, 50, 50), zMaterial);
+        zCyl.rotation.x -= Math.PI / 2;
+
+    xCyl.name = 'X';
+    yCyl.name = 'Y';
+    zCyl.name = 'Z';
+
+    rotationHelper = [xCyl, yCyl, zCyl];
+    
+    $.each(rotationHelper, function(i, v){
+
+      v.visible = false;
+
+    });    
+
+    scene.add(xCyl);
+    scene.add(yCyl);
+    scene.add(zCyl);
+
+  }
+  
+  function moveRotationHelper(pos){
+
+    $.each(rotationHelper, function(i, v){
+
+      v.position = pos;
+
+    });
+
+  }
+
+  function showRotationHelper(){
+
+    $.each(rotationHelper, function(i, v){
+      v.visible = true;
+    });    
+
+  }
+
+  function hideRotationHelper(){
+
+    $.each(rotationHelper, function(i, v){
+      v.visible = false;
+    });
+
+  }
+
+  function rotateRotationHelper(rot){
+
+
+    $.each(rotationHelper, function(i, v){
+
+      // v.rotation = rotation;
+
+      var rotation = rot.clone();
+
+      switch( v.name ){
+
+        case 'X': break;
+        case 'Y': rotation.y += -Math.PI / 2; break;
+        case 'Z': rotation.x += -Math.PI / 2; break;
+
+      }
+
+      v.rotation = rotation;
+
+    });
+
+  }
+
+  function addMorphTargetSliders(mesh){
+    
+    // DEBUG
+    window.morphable = mesh;
+
+    var targets = mesh.morphTargetDictionary;
+
+    var slider_container = $("#morph-sliders ul");
+
+    // console.log(targets)
+
+    for(var key in targets){
+
+      console.log(key, targets[key])
+      var morphSlider = $('<li class="slider"><div class="slider-name">'+nameFromKey[key]+'</div><div class="slider-el" id="'+key+'"></div></li>')
+          // morphSlider.attr('id', key);
+          slider_container.append( morphSlider );
+
+      morphSlider.children('#'+key).slider({
+        min : 0.0,
+        max : 1.0,
+        step : 0.0001,
+        slide : function(event, ui){
+          var key = event.target.id;
+          setTargetFromKey(mesh, key, ui.value)
+          // console.log( mesh.morphTargetDictionary[key], ui.value );
+
+          // console.log(key)
+        }
+      });
+
+    }
+  }
+
+  function setTargetFromKey(mesh, key, value){
+    // console.log(mesh.morphTargetInfluences)
+    mesh.morphTargetInfluences[ mesh.morphTargetDictionary[key] ] = value;
+    mesh.material.needsUpdate = true;
+  }
+
+  var nameFromKey = {
+    'animation_000000' : 'head',
+    'animation_000001' : 'left arm',
+    'animation_000002' : 'right arm',
+    'animation_000003' : 'body',
+    'animation_000004' : 'legs'
+    
+
+  }
+
+    </script>
+  </body>
+</html>

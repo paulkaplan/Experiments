@@ -1,3 +1,8 @@
+#morph-menu ul { list-style:none; padding-top:2em;}
+#morph-menu ul li { width: 90%; }
+#morph-menu ul li .slider-name { float: left; min-width:40%;}
+#morph-menu ul li .slider-el { float: left; min-width:60%;}
+
 #editing{}
 
 .xyz ul li { display: inline-block; width:20%;
