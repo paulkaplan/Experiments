@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Morph Targets for NormalMaterial</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+    <script src="https://raw.github.com/mrdoob/three.js/master/build/three.min.js"></script>
+
+    <style>
+      html, body, div { padding:0; margin:0; overflow:hidden;}
+    </style>
+  </head>
+  <body>
+    <script>
+      var container, camera, normalMesh, lambertMesh, renderer;
+
+      init();
+
+      function init() {
+
+        container = document.createElement( 'div' );
+        document.body.appendChild( container );
+
+        camera = new THREE.PerspectiveCamera( 35, window.innerWidth / window.innerHeight, 0.01, 100 );
+        camera.position.z = 1.5;
+        camera.position.y = 0.5;
+
+        scene = new THREE.Scene();
+
+        var light = new THREE.PointLight(0xffffff);
+            light.position.set(1, 2, 1);
+
+            scene.add( light );
+
+        camera.lookAt( new THREE.Vector3(0, 0.25, 0) );
+
+        renderer = new THREE.WebGLRenderer( { antialias: true } );
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+        container.appendChild( renderer.domElement );
+
+
+
+
+        var loader = new THREE.JSONLoader;
+        
+        loader.load( 'models/robot_morph.js', function ( geometry) {
+
+          var normalMaterial = new THREE.MeshNormalMaterial({
+            morphTargets : true,
+            // morphNormals : true
+            // shading      : THREE.FlatShading
+          });
+
+          var lambertMaterial = new THREE.MeshLambertMaterial({
+            morphTargets : true,
+            // morphNormals : true,
+            shading      : THREE.FlatShading,
+            color        : 0x1ABC9C
+          });
+
+          normalMesh  = new THREE.Mesh(geometry, normalMaterial);
+          lambertMesh = new THREE.Mesh(geometry, lambertMaterial);
+
+          normalMesh.scale = lambertMesh.scale = new THREE.Vector3(0.1, 0.1, 0.1);
+          normalMesh.position.x  += 0.25;
+          lambertMesh.position.x -= 0.25;
+
+          scene.add( normalMesh );
+          scene.add( lambertMesh );
+
+          setMorphConstants( normalMesh );
+
+          animate();
+
+
+        });
+    } 
+
+    function animate() {
+
+        requestAnimationFrame( animate );
+
+        render();
+
+      }
+
+    function render() {
+
+      renderer.render( scene, camera );
+
+    }
+
+    var keyframes, offsetFrame, duration, interpolation, lastKeyframe, currentKeyframe;
+
+    function setMorphConstants(mesh){
+      keyframes = mesh.geometry.morphTargets.length;
+      offsetFrame   = 0;
+      duration      = 2000;
+      interpolation = duration / keyframes;
+    }
+
+      function render() {
+
+          // Alternate morph targets
+
+          var time = Date.now() % duration;
+
+          var keyframe = offsetFrame + Math.floor( time / interpolation );
+
+          if ( keyframe != currentKeyframe ) {
+
+            normalMesh.morphTargetInfluences[ lastKeyframe ] = 0;
+            normalMesh.morphTargetInfluences[ currentKeyframe ] = 1;
+            normalMesh.morphTargetInfluences[ keyframe ] = 0;
+
+            lambertMesh.morphTargetInfluences[ lastKeyframe ] = 0;
+            lambertMesh.morphTargetInfluences[ currentKeyframe ] = 1;
+            lambertMesh.morphTargetInfluences[ keyframe ] = 0;
+
+            lastKeyframe = currentKeyframe;
+            currentKeyframe = keyframe;
+
+          }
+
+          normalMesh.morphTargetInfluences[ keyframe ] = ( time % interpolation ) / interpolation;
+          normalMesh.morphTargetInfluences[ lastKeyframe ] = 1 - normalMesh.morphTargetInfluences[ keyframe ];
+
+          lambertMesh.morphTargetInfluences[ keyframe ] = ( time % interpolation ) / interpolation;
+          lambertMesh.morphTargetInfluences[ lastKeyframe ] = 1 - lambertMesh.morphTargetInfluences[ keyframe ];
+
+        renderer.render( scene, camera );
+
+      }
+    </script>
+  </body>
+</html>

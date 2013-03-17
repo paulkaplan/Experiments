@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>three.js webgl - postprocessing - depth-of-field</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+      body {
+        background-color: #000000;
+        margin: 0px;
+        overflow: hidden;
+        font-family:Monospace;
+        font-size:13px;
+        text-align:center;
+        font-weight: bold;
+        text-align:center;
+      }
+
+      a {
+        color:#0078ff;
+      }
+
+      #info {
+        color:#fff;
+        position: relative;
+        top: 0px;
+        width: 50em;
+        margin: 0 auto -2.1em;
+        padding: 5px;
+        z-index:100;
+      }
+    </style>
+  </head>
+
+  <body>
+    <script src="../lib/js/three.js"></script>
+
+    <script src="../lib/js/shaders/bokehShader.js"></script>
+
+    <script src="../lib/js/Detector.js"></script>
+    <script src="../lib/js/stats.js"></script>
+
+    <script src='../lib/js/dat.gui.js'></script>
+    <script src='../lib/js/TrackballControls.js'></script>
+
+    <script>
+
+      if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+      var container, stats;
+      var camera, scene, renderer, cube;
+
+      var mouseX = 0, mouseY = 0;
+
+      var windowHalfX = window.innerWidth / 2;
+      var windowHalfY = window.innerHeight / 2;
+
+      var height = window.innerHeight - 300;
+
+      var postprocessing = { enabled  : true };
+
+      init();
+      animate();
+      var controls;
+      function init() {
+
+        container = document.createElement( 'div' );
+        document.body.appendChild( container );
+
+        camera = new THREE.PerspectiveCamera( 70, window.innerWidth / height, 1, 3000 );
+        camera.position.z = 200;
+
+        scene = new THREE.Scene();
+        renderer = new THREE.WebGLRenderer( { antialias: false } );
+        renderer.setSize( window.innerWidth, height );
+                controls = new THREE.TrackballControls( camera, renderer.domElement );
+
+        container.appendChild( renderer.domElement );
+
+        var cube_geom = new THREE.CubeGeometry(100, 100, 100);
+        var cube = new THREE.Mesh( cube_geom, new THREE.MeshNormalMaterial() );
+
+        scene.add( cube );
+
+      }  
+      var projector = new THREE.Projector();
+      renderer.domElement.addEventListener('click', function(e){
+        var vector = new THREE.Vector3( ( event.clientX ) * 2 - 1, -( event.clientY ) * 2 + 1, 0.5 );
+
+        projector.unprojectVector( vector, camera );
+
+        var ray = new THREE.Ray( camera.position, vector.subSelf( camera.position ).normalize() );
+
+        var intersects = ray.intersectObjects( [cube], true );
+
+        console.log(intersects)
+      })
+
+      function animate() {
+
+        requestAnimationFrame( animate, renderer.domElement );
+        controls.update();
+        render();
+
+      }
+
+      function render() {
+
+          renderer.render( scene, camera );
+
+        
+
+      }
+
+
+    </script>
+  </body>
+</html>
