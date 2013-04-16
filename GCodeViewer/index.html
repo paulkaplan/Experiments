@@ -225,8 +225,6 @@ var FEED = 1200;
 var FEED_SCALE = 1000;
 var GCODE_SCALE = 0.91;
 var NOZZLE_OFFSET = 10;
-// var nozzle
-// var origin = new THREE.Vector3(0, 0, )
 
 var OPTIONS = {
   show_gcode : true,
@@ -259,7 +257,7 @@ function init(){
   );
 
   camera.position.set(120,70,100);
-  camera.lookAt( scene.position );
+  camera.lookAt( new THREE.Vector3(0, 20, 0) );
 
   renderer = new THREE.WebGLRenderer({ 
     antialias: true
@@ -270,28 +268,24 @@ function init(){
   document.body.appendChild( renderer.domElement );
 
   controls = new THREE.OrbitControls( camera );
-
+  controls.center = new THREE.Vector3(0,20,0);
+  
   var plane = new THREE.Mesh( new THREE.PlaneGeometry( 100, 100, 20, 20 ), new THREE.MeshBasicMaterial( { color: 0xbbbbbb, wireframe: true } ) );
   plane.rotation.x = - Math.PI / 2;
   scene.add( plane );
 
   var light = new THREE.PointLight(0xffffff);
-      // light.position.set(50,100,80);
+
   camera.add( light );
   scene.add( camera );
-  // tool = new THREE.Mesh( new THREE.SphereGeometry(0.1,10,10), new THREE.MeshNormalMaterial() );
-  // scene.add(tool);
-
-  // scene.add( initLine() );
 
   var loader = new THREE.STLLoader();
   loader.load( './nozzle.stl', function(geometry){
-    // console.log(event)
-        // var geometry = event.content;
+
       _.each(geometry.vertices, function(v){
         v.z -= 23;
       });
-      // geometry.verticesNeedUpdate = true;
+
       var mat = new THREE.MeshLambertMaterial({
         color: 0xF1C40F
       });
