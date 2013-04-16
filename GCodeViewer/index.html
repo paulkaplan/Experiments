@@ -197,21 +197,22 @@
       $.get("gcode/"+id+".gcode", function(data){
         $("#collapseOne").collapse('toggle')
         $("#options").parent().show();
-        animateGcode( loadGcode(data) );
+        commands = loadGcode(data)
+        animateGcode( commands );
       })
     })
 
     $(".slider").slider({
       min: 1,
-      max: 1000,
-      value:999,
+      max: 100,
+      value:1,
       tooltip : 'hide'
     })
     .on('slide', function(e){
 
       var v = e.value;
 
-      OPTIONS.speed = v;
+      OPTIONS.n_steps = v;
 
     })
 
@@ -231,7 +232,8 @@ var OPTIONS = {
   show_gcode : true,
   show_movement : false,
   forward : true,
-  speed:999
+  n_steps : 1,
+  animating : false
 }
 
 init();
@@ -310,6 +312,7 @@ function render(){
 
 }
 
+
 function animate(){
 
   requestAnimationFrame( animate );
@@ -319,6 +322,8 @@ function animate(){
   controls.update();
 
   TWEEN.update();
+
+  if(OPTIONS.animating){ for(var i=0; i<OPTIONS.n_steps; i++){ stepGcode( commands ); }}
 
 }
 
@@ -377,6 +382,12 @@ var pos = new THREE.Vector3();
 var current_position = new THREE.Vector3();
 
 function animateGcode( commands ){
+  OPTIONS.animating = true;
+}
+
+
+
+function stepGcode(commands){
 
   var step = OPTIONS.forward ? 1 : -1;
 
@@ -427,72 +438,47 @@ function animateGcode( commands ){
     }
 
 
-    // attributes.alpha.value[ cursor ] = 0.0;
+    tool.position.set( pos.x, pos.y, pos.z );
 
+    // Drag two vertices to prevent flashing to center
+    lineGeo.vertices[ cursor ].set(pos.x, pos.y, pos.z);
+    lineGeo.vertices[ cursor+1 ].set(pos.x, pos.y, pos.z);
 
-    var tween = new TWEEN.Tween( tool.position.clone() )
-        .to(pos, (1000-OPTIONS.speed)/10)
-        .onUpdate(function(){
+    lineGeo.verticesNeedUpdate = true;
 
-          tool.position.set( this.x, this.y, this.z );
+// // If not extruding
+    if( currE === lastE ){
 
-          // Drag two vertices to prevent flashing to center
-          lineGeo.vertices[ cursor ].set(this.x, this.y, this.z);
-          lineGeo.vertices[ cursor+1 ].set(this.x, this.y, this.z);
+      attributes.alpha.value[ cursor ] = 0;     
+      attributes.moved.value[ cursor ] = OPTIONS.forward ? 1.0 : 0.0;
+      attributes.moved.needsUpdate = true;
 
-          lineGeo.verticesNeedUpdate = true;
+      cursor += step;
 
+      lineGeo.vertices[ cursor ].set(tool.position.x, tool.position.y, tool.position.z);
 
-        })
+      // attributes..value[ cursor ] = 1; 
 
-        .onComplete( function(){
+      lineGeo.verticesNeedUpdate = true;
+      attributes.alpha.needsUpdate = true;
 
-    // // If not extruding
-          if( currE === lastE ){
+      // cursor += 1;
+    } else {
 
-            attributes.alpha.value[ cursor ] = 0;     
-            attributes.moved.value[ cursor ] = OPTIONS.forward ? 1.0 : 0.0;
-            attributes.moved.needsUpdate = true;
+      attributes.alpha.value[ cursor ] = 1; 
 
-            cursor += step;
+      attributes.alpha.needsUpdate = true;
 
-            lineGeo.vertices[ cursor ].set(tool.position.x, tool.position.y, tool.position.z);
+    }
 
-            // attributes..value[ cursor ] = 1; 
+    attributes.moved.value[ cursor ] = OPTIONS.forward ? 1.0 : 0.0;
+    attributes.moved.needsUpdate = true;
 
-            lineGeo.verticesNeedUpdate = true;
-            attributes.alpha.needsUpdate = true;
+    command_cursor += step;
+    cursor += step;
 
-            // cursor += 1;
-          } else {
-
-            attributes.alpha.value[ cursor ] = 1; 
-
-            attributes.alpha.needsUpdate = true;
-
-          }
-
-          attributes.moved.value[ cursor ] = OPTIONS.forward ? 1.0 : 0.0;
-          attributes.moved.needsUpdate = true;
-
-          command_cursor += step;
-          cursor += step;
-
-          lastE = currE;
-          animateGcode( commands );
-
-        })
-
-        .start();
-
+    lastE = currE;
   }
-
-}
-
-function animateTestGcode(){
-
-  var commands = loadGcode( testGcode() );
-  animateGcode( commands );
 
 }
 
