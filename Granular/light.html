@@ -135,8 +135,6 @@
         //   sphere.rtd1.x * sphere.rtd1.y * 0.0015,
         //   0.5
         // );
-        ctx.fillStyle = "rgba(0,0,0,0)";
-        ctx.strokeStyle = "rgba(0,0,0,0.08)";
         // else  ctx.fillStyle = "#fff";
         ctx.beginPath();
         // ctx.moveTo( sphere.rtd0.x, sphere.rtd0.y );
@@ -166,17 +164,31 @@ window.requestAnimFrame = (function(){
 // usage:
       // setInterval
       var draw = 0;
+      var prevTime = Date.now();
+      var curTime = Date.now();
+      var deltaTime = 0;
+      var frameTime = 0.0167777;
+      var delta = 0;
+
+      
 
       function animate(){
         requestAnimFrame(animate);
-        render();
+        prevTime = curTime;
+        curTime = Date.now();
+        deltaTime = (curTime - prevTime) / 1000;
+        // theoretically it should be 60fps
+        // so send in how far off we are
+        delta = frameTime / deltaTime;
+        render( );
       }
+
       function render(){
         // setInterval( function(){
           // draw++;
           // clock.tick()
           // window.webkitRequestAnimationFrame(animate);
-          integrator.step();
+          integrator.step(delta);
           // if(draw%8===0){
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawParticles( integrator.particles, ctx );
@@ -194,7 +206,8 @@ window.requestAnimFrame = (function(){
             // document.body.appendChild( stats.domElement );
         canvas = document.getElementById('particleCanvas');
         ctx = canvas.getContext('2d');
-        
+                ctx.fillStyle = "rgba(0,0,0,0)";
+        ctx.strokeStyle = "rgba(0,0,0,0.08)";
         initBoundary();    
         initParticles();
 
@@ -202,7 +215,7 @@ window.requestAnimFrame = (function(){
       }
 
       function initParticles(){
-        var nParticles = 150
+        var nParticles = 100
         var sqrtParticles = Math.floor( Math.sqrt( nParticles ) );
         var spacing = 50;
         for(var n=0; n<nParticles; n++){
@@ -225,43 +238,6 @@ window.requestAnimFrame = (function(){
    return (i+0x100000).toString(16).substr(-6).toUpperCase();
 }
 
-var hsv2rgb = function(hsv, a) {
-  var h = hsv, s = 0.75, v = 1;
-  // var h = hsv, s = 0.75, v = Math.min(1, 0.3+hsv/1000); //helps with cycling color
-  var rgb, i, data = [];
-  if (s === 0) {
-    rgb = [v,v,v];  
-  } else {
-    h = h / 60;
-    i = Math.floor(h);
-    data = [v*(1-s), v*(1-s*(h-i)), v*(1-s*(1-(h-i)))];
-    switch(i) {
-      case 0:
-        rgb = [v, data[2], data[0]];
-        break;
-      case 1:
-        rgb = [data[1], v, data[0]];
-        break;
-      case 2:
-        rgb = [data[0], v, data[2]];
-        break;
-      case 3:
-        rgb = [data[0], data[1], v];
-        break;
-      case 4:
-        rgb = [data[2], data[0], v];
-        break;
-      default:
-        rgb = [v, data[0], data[1]];
-        break;
-    }
-  }
-  // if(Math.random() > 0.999){ console.log}
-  return "rgba("+rgb[0]*255+", "+rgb[1]*255+", "+rgb[2]*255+", "+a+")"; 
-  // return '#' + rgb.map(function(x){ 
-  //   return ("0" + Math.round(x*255).toString(16)).slice(-2);
-  // }).join('');
-};
     </script>
   </body>
 </html>

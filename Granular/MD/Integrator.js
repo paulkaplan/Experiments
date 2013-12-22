@@ -7,11 +7,11 @@ var Integrator = MD.Integrator = function(){
 	this.time = 0;
 };
 
-Integrator.prototype.step = function(){
-	
+Integrator.prototype.step = function(multiplier){
+	if(!multiplier){ multiplier = 1; }
 	// this.gearIntegrate();
 	this.verletIntegrate();
-	this.time += this.dt;
+	this.time += this.dt * multiplier;
 }
 Integrator.prototype.verletIntegrate = function(){
 	// http://www.compsoc.man.ac.uk/~lucky/Democritus/Theory/verlet.html#velver
