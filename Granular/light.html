@@ -1,0 +1,267 @@
+<html>
+<!-- <head>
+  <script src="md/compiled.js"></script>
+  <script src="md/stats.js"></script>
+</head> -->
+  <head>
+    <script src="MD/MD.js"></script>
+    <script src="MD/Sphere.js"></script>
+    <script src="MD/Integrator.js"></script>
+    <script src="MD/stats.js"></script>
+
+    <style>
+      *{ background: #fff;}
+      /*canvas { width:75%; height:75%;}*/
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <canvas width=1000 height=1000 id="particleCanvas"></canvas>
+    </div>
+    <script>
+        var c = document.getElementById('particleCanvas');
+        c.width = window.innerWidth;
+        c.height = window.innerHeight;
+
+       var stats;        
+      var clock;
+      var ctx, canvas;
+      var integrator = new MD.Integrator();
+      var boundaryWidth = 400;
+      var boundaryHeight = 600;
+      var boundaryOffsetX = 400;
+      var boundaryOffsetY = -100;
+      var boundaryCenterX = window.innerWidth/ 2;
+      var boundaryCenterY = 0;
+      var boundaryRadius = window.innerHeight / 1.2;
+      var nBound = 50;
+      var bladeCount = 100;
+      var boundSphereRad = 50;
+      var System = function(){
+        this.restart = function(){
+          integrator.restart();
+          initBoundary();
+          initParticles();
+        }
+      };
+      var system = new System();
+
+      var initBoundary = function(){
+        for( var n=0; n<nBound; n++){
+          var pos = new Vec2( boundaryCenterX+boundaryRadius*Math.cos(2*Math.PI*n/nBound), boundaryCenterY+boundaryRadius*Math.sin(2*Math.PI*n/nBound), 0 );
+               var sphere = new MD.Sphere(1, boundSphereRad);
+                   sphere.rtd0 = pos;
+          integrator.particles.push( sphere );
+        }
+      }
+
+      // var gui = new dat.GUI();
+          // gui.add(system, "restart");
+ // // Blender Blade
+ //      for( var n=0; n<bladeCount/2; n++){
+ //        var pos = new Vec2( boundaryCenter-boundaryRadius+boundaryRadius*n*4/bladeCount, boundaryCenter, 0 );
+ //             var sphere = new MD.Sphere(1, 12);
+ //                 sphere.rtd0 = pos;
+ //        integrator.particles.push( sphere );
+ //      }
+ //      for( var n=0; n<bladeCount/2; n++){
+ //        var pos = new Vec2( boundaryCenter, boundaryCenter-boundaryRadius+boundaryRadius*n*4/bladeCount, 0 );
+ //             var sphere = new MD.Sphere(1, 12);
+ //                 sphere.rtd0 = pos;
+ //        integrator.particles.push( sphere );
+ //      }    
+
+      // for(var n=0;n<51; n++){
+      //   var step = boundaryWidth/50;
+      //   var pos = new Vec2( boundaryOffsetX+step*n,boundaryOffsetY,0 );
+      //        var sphere = new MD.Sphere(1, 12);
+      //            sphere.rtd0 = pos;
+      //   integrator.particles.push( sphere );
+      // }
+      // for(var n=0;n<51; n++){
+      //   var step= boundaryWidth/51;
+      //   var pos = new Vec2( boundaryOffsetX+step*n,boundaryOffsetY+boundaryHeight,0 );
+      //        var sphere = new MD.Sphere(1, 12);
+      //            sphere.rtd0 = pos;
+      //   integrator.particles.push( sphere );
+      // }
+      // for(var n=0;n<51; n++){
+      //   var step =boundaryHeight/50;
+      //   var pos = new Vec2( boundaryOffsetX+0,boundaryOffsetY+step*n,0 );
+      //        var sphere = new MD.Sphere(1, 12);
+      //            sphere.rtd0 = pos;
+      //   integrator.particles.push( sphere );
+      // }
+      // for(var n=0;n<51; n++){
+      //   var step = boundaryHeight/50;
+      //   var pos = new Vec2( boundaryOffsetX+boundaryWidth,boundaryOffsetY+step*n,0 );
+      //        var sphere = new MD.Sphere(1, 12);
+      //            sphere.rtd0 = pos;
+      //   integrator.particles.push( sphere );
+      // }
+
+// // bottom bucket
+//       for(var n=0;n<51; n++){
+//         var step =boundaryHeight/50;
+//         var pos = new Vec2( boundaryOffsetX+0,boundaryHeight+boundaryOffsetY+step*n,0 );
+//              var sphere = new MD.Sphere(1, 12);
+//                  sphere.rtd0 = pos;
+//         integrator.particles.push( sphere );
+//       }
+//       for(var n=0;n<51; n++){
+//         var step = boundaryHeight/50;
+//         var pos = new Vec2( boundaryOffsetX+boundaryWidth,boundaryHeight+ boundaryOffsetY+step*n,0 );
+//              var sphere = new MD.Sphere(1, 12);
+//                  sphere.rtd0 = pos;
+//         integrator.particles.push( sphere );
+//       }
+//       for(var n=0;n<51; n++){
+//         var step= boundaryWidth/50;
+//         var pos = new Vec2( boundaryOffsetX+step*n,boundaryHeight+boundaryOffsetY+boundaryHeight,0 );
+//              var sphere = new MD.Sphere(1, 10);
+//                  sphere.rtd0 = pos;
+//         integrator.particles.push( sphere );
+//       }
+
+
+      function drawParticle(sphere, ctx){
+        // console.log(sphere)
+        // var speed = Math.floor(sphere.rtd1.norm()/2.8);
+        // console.log(toHex(speed))
+                // if(sphere.type===0) ctx.fillStyle = hsv2rgb( speed );
+
+        // if(sphere.type===0) 
+        // ctx.fillStyle = hsv2rgb( 
+        //   sphere.rtd1.x * sphere.rtd1.y * 0.0015,
+        //   0.5
+        // );
+        ctx.fillStyle = "rgba(0,0,0,0)";
+        ctx.strokeStyle = "rgba(0,0,0,0.08)";
+        // else  ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        // ctx.moveTo( sphere.rtd0.x, sphere.rtd0.y );
+        ctx.arc( sphere.rtd0.x, sphere.rtd0.y, sphere.radius, 0, Math.PI*2, true ); 
+        ctx.stroke()
+        ctx.fill();
+      }
+      
+      function drawParticles(spheres, ctx){
+        clicking = false;
+        // console.log(spheres[0]);
+        for(var n=0; n<spheres.length; n++){
+          drawParticle( spheres[n] , ctx);
+        }
+      }
+
+window.requestAnimFrame = (function(){
+  return  window.requestAnimationFrame       ||
+          window.webkitRequestAnimationFrame ||
+          window.mozRequestAnimationFrame    ||
+          function( callback ){
+            window.setTimeout(callback, 1000 / 60);
+          };
+})();
+
+
+// usage:
+      // setInterval
+      var draw = 0;
+
+      function animate(){
+        requestAnimFrame(animate);
+        render();
+      }
+      function render(){
+        // setInterval( function(){
+          // draw++;
+          // clock.tick()
+          // window.webkitRequestAnimationFrame(animate);
+          integrator.step();
+          // if(draw%8===0){
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawParticles( integrator.particles, ctx );
+          // }
+          // stats.update()
+        // }, 10);
+      }
+
+      window.onload = function(){
+      // clock = new Clock();
+      stats = new Stats();
+            stats.setMode(0);
+            stats.domElement.style.position = 'absolute';
+            stats.domElement.style.top = '0px';
+            // document.body.appendChild( stats.domElement );
+        canvas = document.getElementById('particleCanvas');
+        ctx = canvas.getContext('2d');
+        
+        initBoundary();    
+        initParticles();
+
+        animate();
+      }
+
+      function initParticles(){
+        var nParticles = 150
+        var sqrtParticles = Math.floor( Math.sqrt( nParticles ) );
+        var spacing = 50;
+        for(var n=0; n<nParticles; n++){
+          var pos = new Vec2( 
+            boundaryOffsetX+spacing+(n%sqrtParticles)*spacing,
+            boundaryOffsetY+spacing+Math.floor(n/sqrtParticles)*spacing,
+            0 
+          );
+          
+          var sphere = new MD.Sphere(0, 
+            30, 
+            Math.floor(n/sqrtParticles)/sqrtParticles);
+              sphere.rtd0 = pos;
+              // sphere.rtd1 = vel;
+          integrator.particles.push( sphere );        
+        }
+      }
+      function toHex(i) {
+// function dec2hex(i) {
+   return (i+0x100000).toString(16).substr(-6).toUpperCase();
+}
+
+var hsv2rgb = function(hsv, a) {
+  var h = hsv, s = 0.75, v = 1;
+  // var h = hsv, s = 0.75, v = Math.min(1, 0.3+hsv/1000); //helps with cycling color
+  var rgb, i, data = [];
+  if (s === 0) {
+    rgb = [v,v,v];  
+  } else {
+    h = h / 60;
+    i = Math.floor(h);
+    data = [v*(1-s), v*(1-s*(h-i)), v*(1-s*(1-(h-i)))];
+    switch(i) {
+      case 0:
+        rgb = [v, data[2], data[0]];
+        break;
+      case 1:
+        rgb = [data[1], v, data[0]];
+        break;
+      case 2:
+        rgb = [data[0], v, data[2]];
+        break;
+      case 3:
+        rgb = [data[0], data[1], v];
+        break;
+      case 4:
+        rgb = [data[2], data[0], v];
+        break;
+      default:
+        rgb = [v, data[0], data[1]];
+        break;
+    }
+  }
+  // if(Math.random() > 0.999){ console.log}
+  return "rgba("+rgb[0]*255+", "+rgb[1]*255+", "+rgb[2]*255+", "+a+")"; 
+  // return '#' + rgb.map(function(x){ 
+  //   return ("0" + Math.round(x*255).toString(16)).slice(-2);
+  // }).join('');
+};
+    </script>
+  </body>
+</html>

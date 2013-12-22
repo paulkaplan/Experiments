@@ -6,7 +6,7 @@ var Sphere = MD.Sphere = function(type, radius, index){
 	this.index = index;
 	// particle description
 	this.J = 10; // Moment of inertia
-	this.m = 10; // Mass
+	this.m = 20; // Mass
 	
 	// material description
 	this.Y = Math.pow(10, 5.33);

@@ -3,7 +3,7 @@
 var Integrator = MD.Integrator = function(){
 	this.nParticles = 0;
 	this.particles  = [];
-	this.dt = Math.pow(10, -2.50);
+	this.dt = Math.pow(10, -3.1);
 	this.time = 0;
 };
 
