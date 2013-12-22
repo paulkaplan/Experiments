@@ -24,6 +24,7 @@
       var clock;
       var ctx, canvas;
       var integrator = new MD.Integrator();
+          integrator.dt = Math.pow(10, -2.5);
       var boundaryWidth = 300;
       var boundaryHeight = 600;
       var boundaryOffsetX = 185;
@@ -188,6 +189,7 @@
           var sphere = new MD.Sphere(0, 7+0*Math.random(), Math.floor(n/sqrtParticles)/sqrtParticles);
               sphere.rtd0 = pos;
               // sphere.rtd1 = vel;
+          sphere.m = 10;
           integrator.particles.push( sphere );        
         }
       }
